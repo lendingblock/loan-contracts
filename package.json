@@ -21,5 +21,8 @@
   "homepage": "https://github.com/lendingblock/loan-contracts#readme",
   "dependencies": {
     "truffle": "^4.1.11"
+  },
+  "devDependencies": {
+    "solidity-coverage": "^0.5.4"
   }
 }
