@@ -6,3 +6,5 @@ build
 .gitignore
 .dockerignore
 Dockerfile
+coverage
+coverage.json
