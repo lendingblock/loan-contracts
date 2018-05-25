@@ -30,4 +30,4 @@ shell:		## Push docker image to Amazon ECR
 	docker run --rm -it $(DOCKER_IMAGE) /bin/sh
 
 test:
-	docker run --rm $(DOCKER_IMAGE) node_modules/.bin/truffle test test/ownable.js
+	docker run --rm $(DOCKER_IMAGE) npm run test
