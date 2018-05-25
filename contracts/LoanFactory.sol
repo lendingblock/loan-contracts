@@ -1,4 +1,4 @@
-pragma solidity ^0.4.18;
+pragma solidity ^0.4.24;
 
 
 /**
@@ -15,7 +15,7 @@ contract Ownable {
    * @dev The Ownable constructor sets the original `owner` of the contract to the sender
    * account.
    */
-  function Ownable() public {
+  constructor() public {
     owner = msg.sender;
   }
 
@@ -55,7 +55,7 @@ contract Loan {
 
 	LoanFactory public factory;
 
-	function Loan(
+	constructor(
 		uint256[8] _input,
 		string _currency,
 		string _collateralCurrency,
@@ -135,7 +135,7 @@ contract LoanFactory is Ownable {
 		_;
 	}
 
-	function LoanFactory() public {
+	constructor() public {
 		worker = msg.sender;
 		loans.length = 1;
 	}
