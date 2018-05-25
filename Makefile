@@ -31,3 +31,6 @@ shell:		## Push docker image to Amazon ECR
 
 test:
 	docker run --rm $(DOCKER_IMAGE) npm run test
+
+coverage:
+	docker run --rm $(DOCKER_IMAGE) npm run coverage
