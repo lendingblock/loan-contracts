@@ -1,5 +1,7 @@
 # Loan smart contracts
 
+[![CircleCI](https://circleci.com/gh/lendingblock/loan-contracts.svg?style=svg)](https://circleci.com/gh/lendingblock/loan-contracts)
+
 Ethereum smart contracts for creating and managing loans
 
 ## Getting started
