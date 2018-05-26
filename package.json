@@ -7,19 +7,18 @@
     "test": "test"
   },
   "scripts": {
-    "test": "node_modules/.bin/truffle test test/ownable.js",
-    "coverage": "node_modules/.bin/solidity-coverage",
+    "test": "solidity-coverage"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/lendingblock/loan-contracts.git"
+    "url": "https://github.com/lendingblock/loan-contracts"
   },
-  "author": "",
+  "author": "Lendingblock",
   "license": "ISC",
   "bugs": {
     "url": "https://github.com/lendingblock/loan-contracts/issues"
   },
-  "homepage": "https://github.com/lendingblock/loan-contracts#readme",
+  "homepage": "https://github.com/lendingblock/loan-contracts",
   "dependencies": {
     "truffle": "^4.1.11"
   },

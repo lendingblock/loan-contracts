@@ -1,6 +1,6 @@
 # Loan smart contracts
 
-Ethereum smart contracts for creating and managing loans 
+Ethereum smart contracts for creating and managing loans
 
 ## Getting started
 
@@ -17,8 +17,7 @@ It is going to install:
 
 ## Commands
 
-* `npm run test`: run the tests with Truffle
-* `npm run coverage`: run the coverage with Solidity Coverage
+* `yarn test`: run the tests with truffle and coverage with Solidity Coverage
 
 [Truffle]: http://trufflesuite.com
-[Solidity Coverage]: https://github.com/sc-forks/solidity-coverage 
+[Solidity Coverage]: https://github.com/sc-forks/solidity-coverage
