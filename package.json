@@ -7,7 +7,7 @@
     "test": "test"
   },
   "scripts": {
-    "test": "solidity-coverage"
+    "test": "solium -d  contracts && solidity-coverage"
   },
   "repository": {
     "type": "git",
@@ -23,6 +23,7 @@
     "truffle": "^4.1.11"
   },
   "devDependencies": {
-    "solidity-coverage": "^0.5.4"
+    "solidity-coverage": "0.5",
+    "solium": "1.1"
   }
 }
