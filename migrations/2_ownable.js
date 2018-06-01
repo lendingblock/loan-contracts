@@ -1,5 +1,5 @@
-var Ownable = artifacts.require("./Ownable.sol");
+var Sample = artifacts.require("./Sample.sol");
 
 module.exports = function(deployer) {
-  deployer.deploy(Ownable);
+  deployer.deploy(Sample);
 };
