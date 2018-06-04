@@ -14,7 +14,7 @@ contract Ownable {
      * @dev The Ownable constructor sets the original `owner` of the contract to the sender
      * account.
      */
-    constructor () public {
+    constructor() public {
         owner = msg.sender;
     }
 
@@ -37,104 +37,135 @@ contract Ownable {
     }
 }
 
+
 contract Loan is Ownable {
-
-    address public worker;
-
-    enum loan_status {
-        PENDING,
-        ACTIVE,
-        INTEREST_PAYMENT_IN_DEFAULT,
-        MARGIN_CALL,
-        MARGIN_CALL_DEFAULT,
-        PRINCIPAL_REPAYMENT_DEFAULT,
-        LIQUIDATED,
-        MATURED,
-        COMPLETED
+    enum LoanStatus {
+        Pending,
+        Active,
+        InterestPaymentInDefault,
+        MarginCall,
+        MarginCallInDefault,
+        PrincipalRepaymentDefault,
+        Liquidated,
+        Matured,
+        Completed
     }
 
-    struct loanlets_struct {
+    struct Lender {
         bytes32 id;
-        bytes32 order_id;
-        bytes32 lender_user_id;
+        bytes32 orderId;
+        bytes32 lenderUserId;
         uint256 amount;
         uint256 price;
         uint256 weight;
-        loan_status status;
     }
 
-    struct interest_struct {
-        uint256 payment_time;
+    struct Interest {
+        uint256 paymentTime;
         uint256 amount;
         bool paid;
     }
 
+    address public worker;
     uint256 public tenor;
-    uint256 public principal_amount;
-    uint256 public collateral_amount;
-    uint256 public created_time;
-    uint256 public lower_required_margin;
-    uint256 public higher_required_margin;
-    uint256 public last_margin_time;
-    uint256 public margin_lead_time;
-    uint256 public mature_lead_time;
-    uint256 public interest_lead_time;
-    uint256 public constant interest_divisor = 10000;
-    bytes32 public constant interest_currency = 0x4c4e44;
-    bytes32 public borrower_user_id;
-    bytes32 public holding_user_id;
-    bytes32 public escrow_user_id;
-    bytes32 public liquidator_user_id;
+    uint256 public principalAmount;
+    uint256 public collateralAmount;
+    uint256 public createdTime;
+    uint256 public lowerRequiredMargin;
+    uint256 public higherRequiredMargin;
+    uint256 public lastMarginTime;
+    uint256 public marginLeadTime;
+    uint256 public matureLeadTime;
+    uint256 public interestLeadTime;
+    uint256 public constant INTEREST_DIVISOR = 10000;
+    bytes32 public constant INTEREST_CURRENCY = 0x4c4e44;
+    bytes32 public borrowerUserId;
+    bytes32 public holdingUserId;
+    bytes32 public escrowUserId;
+    bytes32 public liquidatorUserId;
     bytes32 public id;
-    bytes32 public order_id;
-    bytes32 public principal_currency;
-    bytes32 public collateral_currency;
+    bytes32 public orderId;
+    bytes32 public principalCurrency;
+    bytes32 public collateralCurrency;
+    LoanStatus public status;
+    Lender[] public lenders;
+    Interest[] public interest;
+    uint256 public transferRecordsId;
+    bytes32[] public transferRecords;
+    bytes32 public constant DEFAULT_TRANSFER_RECORD = 0xdeadbeef;
 
-    loan_status public status;
-    loanlets_struct[] public loanlets;
-    interest_struct[] public interest;
-    uint256 public transfer_records_id;
-    bytes32[] public transfer_records;
-    bytes32 public constant default_transfer_record = 0xdeadbeef;
+    event Transfer(bytes32 from, bytes32 to, uint256 amount, bytes32 currency, uint256 transferRecordsId, string functionName);
 
     modifier onlyWorker() {
         require(msg.sender == worker);
         _;
     }
 
-    event Transfer(bytes32 from, bytes32 to, uint256 amount, bytes32 currency, uint256 transfer_records_id, string function_name);
+    constructor(
+        uint256[10] newLoanUintInput,
+        bytes32[8] newLoanBytesInput,
+        address _owner,
+        address _worker
+    )
+        public
+    {
+        tenor = newLoanUintInput[0];
+        principalAmount = newLoanUintInput[1];
+        collateralAmount = newLoanUintInput[2];
+        createdTime = newLoanUintInput[3];
+        lowerRequiredMargin = newLoanUintInput[4];
+        higherRequiredMargin = newLoanUintInput[5];
+        marginLeadTime = newLoanUintInput[6];
+        lastMarginTime = newLoanUintInput[7];
+        matureLeadTime = newLoanUintInput[8];
+        interestLeadTime = newLoanUintInput[9];
+        borrowerUserId = newLoanBytesInput[0];
+        holdingUserId = newLoanBytesInput[1];
+        escrowUserId = newLoanBytesInput[2];
+        liquidatorUserId = newLoanBytesInput[3];
+        id = newLoanBytesInput[4];
+        orderId = newLoanBytesInput[5];
+        principalCurrency = newLoanBytesInput[6];
+        collateralCurrency = newLoanBytesInput[7];
+        owner = _owner;
+        worker = _worker;
+    }
 
-    function change_worker(address _worker)
+    function() external {
+        revert();
+    }
+
+    function changeWorker(address _worker)
         external
         onlyOwner
     {
         worker = _worker;
     }
 
-    function change_margin_lead_time(uint256 _margin_lead_time)
+    function changeMarginLeadTime(uint256 _marginLeadTime)
         external
         onlyOwner
     {
-        margin_lead_time = _margin_lead_time;
+        marginLeadTime = _marginLeadTime;
     }
 
-    function change_mature_lead_time(uint256 _mature_lead_time)
+    function changeMatureLeadTime(uint256 _matureLeadTime)
         external
         onlyOwner
     {
-        mature_lead_time = _mature_lead_time;
+        matureLeadTime = _matureLeadTime;
     }
 
-    function change_interest(uint256 _payment_time, uint256 _amount, bool _paid, uint256 _interest_id)
+    function changeInterest(uint256 paymentTime, uint256 amount, bool paid, uint256 interestId)
         external
         onlyOwner
     {
-        interest[_interest_id].payment_time = _payment_time;
-        interest[_interest_id].amount = _amount;
-        interest[_interest_id].paid = _paid;
+        interest[interestId].paymentTime = paymentTime;
+        interest[interestId].amount = amount;
+        interest[interestId].paid = paid;
     }
 
-    function change_status(loan_status _status)
+    function changeStatus(LoanStatus _status)
         external
         onlyOwner
     {
@@ -142,42 +173,40 @@ contract Loan is Ownable {
     }
 
 
-    function add_loanlets(
-        uint256[] _uint_input,
-        loan_status[] _status,
-        bytes32[] _bytes32_input
+    function addLenders(
+        uint256[] lenderUintInput,
+        bytes32[] lenderBytesInput
     )
         external
         onlyWorker
     {
-        require(status == loan_status.PENDING);
-        for (uint256 i = 0; i < _status.length; i++) {
-            loanlets.push(loanlets_struct({
-                id: _bytes32_input[3 * i + 0],
-                order_id: _bytes32_input[3 * i + 1],
-                lender_user_id: _bytes32_input[3 * i + 2],
-                amount: _uint_input[3 * i + 0],
-                price: _uint_input[3 * i + 1],
-                weight: _uint_input[3 * i + 2],
-                status: _status[0]
+        require(status == LoanStatus.Pending);
+        for (uint256 i = 0; i < lenderUintInput.length / 3; i++) {
+            lenders.push(Lender({
+                id: lenderBytesInput[3 * i + 0],
+                orderId: lenderBytesInput[3 * i + 1],
+                lenderUserId: lenderBytesInput[3 * i + 2],
+                amount: lenderUintInput[3 * i + 0],
+                price: lenderUintInput[3 * i + 1],
+                weight: lenderUintInput[3 * i + 2]
             }));
         }
     }
 
-    function add_interest(
-        uint256[] _payment_time,
-        uint256[] _amount,
-        bool[] _paid
+    function addInterest(
+        uint256[] paymentTime,
+        uint256[] amount,
+        bool[] paid
     )
         external
         onlyWorker
     {
-        require(status == loan_status.PENDING);
-        for (uint256 i = 0; i < _payment_time.length; i++) {
-            interest.push(interest_struct({
-                payment_time: _payment_time[i],
-                amount: _amount[i],
-                paid: _paid[i]
+        require(status == LoanStatus.Pending);
+        for (uint256 i = 0; i < paymentTime.length; i++) {
+            interest.push(Interest({
+                paymentTime: paymentTime[i],
+                amount: amount[i],
+                paid: paid[i]
             }));
         }
     }
@@ -186,201 +215,195 @@ contract Loan is Ownable {
         external
         onlyWorker
     {
-        require(status == loan_status.PENDING);
-        status = loan_status.ACTIVE;
-        emit Transfer(holding_user_id, borrower_user_id, principal_amount, principal_currency, transfer_records_id++, "start");
-        emit Transfer(holding_user_id, escrow_user_id, collateral_amount, collateral_currency, transfer_records_id++, "start");
+        require(status == LoanStatus.Pending);
+        status = LoanStatus.Active;
+        emit Transfer(holdingUserId, borrowerUserId, principalAmount, principalCurrency, transferRecordsId++, "start");
+        emit Transfer(holdingUserId, escrowUserId, collateralAmount, collateralCurrency, transferRecordsId++, "start");
     }
 
-    function add_transfer_records(bytes32[] _transfer_records)
+    function addTransferRecords(bytes32[] _transferRecords)
         external
         onlyWorker
     {
-        for (uint256 i = 0; i < _transfer_records.length; i++) {
-            transfer_records.push(_transfer_records[i]);
+        for (uint256 i = 0; i < _transferRecords.length; i++) {
+            transferRecords.push(_transferRecords[i]);
         }
-        require(transfer_records.length <= transfer_records_id);
+        require(transferRecords.length <= transferRecordsId);
     }
 
-    function pay_interest(uint256 _interest_id)
+    function payInterest(uint256 interestId)
         external
         onlyWorker
     {
-        require(status == loan_status.ACTIVE);
-        if (_interest_id > 0) {
-            require(interest[_interest_id - 1].paid == true);
+        require(status == LoanStatus.Active);
+        if (interestId > 0) {
+            require(interest[interestId - 1].paid == true);
         }
-        require(interest[_interest_id].paid == false);
-        require(now >= interest[_interest_id].payment_time);
-        for (uint256 i = 0; i < loanlets.length; i++) {
+        require(interest[interestId].paid == false);
+        require(now >= interest[interestId].paymentTime);
+        for (uint256 i = 0; i < lenders.length; i++) {
             emit Transfer(
-                borrower_user_id,
-                loanlets[i].lender_user_id,
-                interest[_interest_id].amount*loanlets[i].weight/interest_divisor,
-                interest_currency,
-                transfer_records_id++,
-                "pay_interest"
+                borrowerUserId,
+                lenders[i].lenderUserId,
+                interest[interestId].amount * lenders[i].weight / INTEREST_DIVISOR,
+                INTEREST_CURRENCY,
+                transferRecordsId++,
+                "payInterest"
             );
         }
     }
 
-    function interest_default(uint256 _interest_id, uint256 _liquidate_collateral_amount)
+    function interestDefault(uint256 interestId, uint256 liquidateCollateralAmount)
         external
         onlyWorker
     {
-        require(status == loan_status.ACTIVE);
-        require(interest[_interest_id].paid == false);
-        require(now > interest[_interest_id].payment_time + interest_lead_time);
-        require(transfer_records[transfer_records_id - 1] == default_transfer_record);
-        emit Transfer(escrow_user_id, liquidator_user_id, _liquidate_collateral_amount, collateral_currency, transfer_records_id++, "interest_default");
-    }
-
-    function margin_default(uint256 _lower_required_margin, uint256 _higher_required_margin, uint256 _last_margin_time)
-        external
-        onlyWorker
-    {
-        require(status == loan_status.ACTIVE);
-        lower_required_margin = _lower_required_margin;
-        higher_required_margin = _higher_required_margin;
-        last_margin_time = _last_margin_time;
-        require(collateral_amount < lower_required_margin);
-        require(now > last_margin_time + margin_lead_time);
-        status = loan_status.MARGIN_CALL_DEFAULT;
-        emit Transfer(escrow_user_id, liquidator_user_id, collateral_amount, collateral_currency, transfer_records_id++, "margin_default");
-    }
-
-    function margin_excess(uint256 _lower_required_margin, uint256 _higher_required_margin, uint256 _last_margin_time)
-        external
-        onlyWorker
-    {
-        require(status == loan_status.ACTIVE);
-        lower_required_margin = _lower_required_margin;
-        higher_required_margin = _higher_required_margin;
-        last_margin_time = _last_margin_time;
-        require(collateral_amount > _higher_required_margin);
-        uint256 release_amount = collateral_amount - (_lower_required_margin + _higher_required_margin) / 2;
+        require(status == LoanStatus.Active);
+        require(interest[interestId].paid == false);
+        require(now > interest[interestId].paymentTime + interestLeadTime);
+        require(transferRecords[transferRecordsId - 1] == DEFAULT_TRANSFER_RECORD);
         emit Transfer(
-            escrow_user_id,
-            borrower_user_id,
-            release_amount,
-            collateral_currency,
-            transfer_records_id++,
-            "margin_excess"
+            escrowUserId,
+            liquidatorUserId,
+            liquidateCollateralAmount,
+            collateralCurrency,
+            transferRecordsId++,
+            "interestDefault"
         );
-        collateral_amount -= release_amount;
+    }
+
+    function marginDefault(uint256 _lowerRequiredMargin, uint256 _higherRequiredMargin, uint256 _lastMarginTime)
+        external
+        onlyWorker
+    {
+        require(status == LoanStatus.Active);
+        lowerRequiredMargin = _lowerRequiredMargin;
+        higherRequiredMargin = _higherRequiredMargin;
+        lastMarginTime = _lastMarginTime;
+        require(collateralAmount < lowerRequiredMargin);
+        require(now > lastMarginTime + marginLeadTime);
+        status = LoanStatus.MarginCallInDefault;
+        emit Transfer(
+            escrowUserId,
+            liquidatorUserId,
+            collateralAmount,
+            collateralCurrency,
+            transferRecordsId++,
+            "marginDefault"
+        );
+    }
+
+    function marginExcess(uint256 _lowerRequiredMargin, uint256 _higherRequiredMargin, uint256 _lastMarginTime)
+        external
+        onlyWorker
+    {
+        require(status == LoanStatus.Active);
+        lowerRequiredMargin = _lowerRequiredMargin;
+        higherRequiredMargin = _higherRequiredMargin;
+        lastMarginTime = _lastMarginTime;
+        require(collateralAmount > _higherRequiredMargin);
+        uint256 releaseAmount = collateralAmount - (lowerRequiredMargin + higherRequiredMargin) / 2;
+        emit Transfer(
+            escrowUserId,
+            borrowerUserId,
+            releaseAmount,
+            collateralCurrency,
+            transferRecordsId++,
+            "marginExcess"
+        );
+        collateralAmount -= releaseAmount;
     }
 
     function mature()
         external
         onlyWorker
     {
-        require(status == loan_status.ACTIVE);
-        require(now >= created_time + tenor);
-        require(transfer_records.length == transfer_records_id);
-        status = loan_status.MATURED;
-        emit Transfer(borrower_user_id, escrow_user_id, principal_amount, principal_currency, transfer_records_id++, "mature");
+        require(status == LoanStatus.Active);
+        require(now >= createdTime + tenor);
+        require(transferRecords.length == transferRecordsId);
+        status = LoanStatus.Matured;
+        emit Transfer(
+            borrowerUserId,
+            escrowUserId,
+            principalAmount,
+            principalCurrency,
+            transferRecordsId++,
+            "mature"
+        );
     }
 
-    function mature_default()
+    function matureDefault()
         external
         onlyWorker
     {
-        require(status == loan_status.MATURED);
-        require(now >= created_time + tenor + mature_lead_time);
-        require(transfer_records[transfer_records_id - 1] == default_transfer_record);
-        status = loan_status.PRINCIPAL_REPAYMENT_DEFAULT;
-        emit Transfer(escrow_user_id, liquidator_user_id, collateral_amount, collateral_currency, transfer_records_id++, "mature_default");
+        require(status == LoanStatus.Matured);
+        require(now >= createdTime + tenor + matureLeadTime);
+        require(transferRecords[transferRecordsId - 1] == DEFAULT_TRANSFER_RECORD);
+        status = LoanStatus.PrincipalRepaymentDefault;
+        emit Transfer(
+            escrowUserId,
+            liquidatorUserId,
+            collateralAmount,
+            collateralCurrency,
+            transferRecordsId++,
+            "matureDefault"
+        );
     }
 
     function complete()
         external
         onlyWorker
     {
-        require(transfer_records.length == transfer_records_id);
-        require(transfer_records[transfer_records_id - 1] != default_transfer_record);
-        if (status == loan_status.MATURED) {
-            status = loan_status.COMPLETED;
-        } else if (status == loan_status.PRINCIPAL_REPAYMENT_DEFAULT) {
-            status = loan_status.COMPLETED;
+        require(transferRecords.length == transferRecordsId);
+        require(transferRecords[transferRecordsId - 1] != DEFAULT_TRANSFER_RECORD);
+        if (status == LoanStatus.Matured) {
+            status = LoanStatus.Completed;
+        } else if (status == LoanStatus.PrincipalRepaymentDefault) {
+            status = LoanStatus.Completed;
         } else {
             revert();
         }
     }
-
-    constructor (
-        uint256[10] _uint_input,
-        bytes32[8] _bytes32_input,
-        address _owner,
-        address _worker
-    )
-        public
-    {
-        tenor = _uint_input[0];
-        principal_amount = _uint_input[1];
-        collateral_amount = _uint_input[2];
-        created_time = _uint_input[3];
-        lower_required_margin = _uint_input[4];
-        higher_required_margin = _uint_input[5];
-        margin_lead_time = _uint_input[6];
-        last_margin_time = _uint_input[7];
-        mature_lead_time = _uint_input[8];
-        interest_lead_time = _uint_input[9];
-        borrower_user_id = _bytes32_input[0];
-        holding_user_id = _bytes32_input[1];
-        escrow_user_id = _bytes32_input[2];
-        liquidator_user_id = _bytes32_input[3];
-        id = _bytes32_input[4];
-        order_id = _bytes32_input[5];
-        principal_currency = _bytes32_input[6];
-        collateral_currency = _bytes32_input[7];
-        owner = _owner;
-        worker = _worker;
-    }
-
-    function () external {
-        revert();
-    }
 }
 
-contract LoanFactory is Ownable {
 
+contract LoanFactory is Ownable {
     address public worker;
     address[] public loans;
-    uint256 public loan_id;
+    uint256 public loanId;
+
+    event NewLoan(address indexed loan, uint256 loanId);
 
     modifier onlyWorker() {
         require(msg.sender == worker);
         _;
     }
 
-    event New_loan(address indexed loan, uint256 loan_id);
-
-    constructor () public {
+    constructor() public {
         worker = msg.sender;
         loans.length = 1;
     }
 
-    function change_worker(address _worker)
+    function() external {
+        revert();
+    }
+
+    function changeWorker(address _worker)
         external
         onlyOwner
     {
         worker = _worker;
     }
 
-    function new_loan(
-        uint256[10] _uint_input,
-        bytes32[8] _bytes32_input
+    function newLoan(
+        uint256[10] newLoanUintInput,
+        bytes32[8] newLoanBytesInput
     )
         external
         onlyOwner
     {
-        Loan createdLoan = new Loan(_uint_input, _bytes32_input, owner, worker);
-        loans.push(createdLoan);
-        loan_id++;
-        emit New_loan(createdLoan, loan_id);
-    }
-
-    function () external {
-        revert();
+        Loan loan = new Loan(newLoanUintInput, newLoanBytesInput, owner, worker);
+        loans.push(loan);
+        loanId++;
+        emit NewLoan(loan, loanId);
     }
 }
