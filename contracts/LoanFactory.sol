@@ -1,44 +1,6 @@
 pragma solidity 0.4.24;
 
-/**
- * @title Ownable
- * @dev The Ownable contract has an owner address, and provides basic authorization control
- * functions, this simplifies the implementation of "user permissions".
- */
-contract Ownable {
-    address public owner;
-
-    event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
-
-    /**
-     * @dev The Ownable constructor sets the original `owner` of the contract to the sender
-     * account.
-     */
-    constructor() public {
-        owner = msg.sender;
-    }
-
-    /**
-     * @dev Throws if called by any account other than the owner.
-     */
-    modifier onlyOwner() {
-        require(msg.sender == owner);
-        _;
-    }
-
-    /**
-     * @dev Allows the current owner to transfer control of the contract to a newOwner.
-     * @param newOwner The address to transfer ownership to.
-     */
-    function transferOwnership(address newOwner) public onlyOwner {
-        require(newOwner != address(0));
-        emit OwnershipTransferred(owner, newOwner);
-        owner = newOwner;
-    }
-}
-
-
-contract Loan is Ownable {
+contract Loan {
     enum LoanStatus {
         Pending,
         Active,
@@ -66,7 +28,7 @@ contract Loan is Ownable {
         bool paid;
     }
 
-    address public worker;
+    LoanFactory public loanFactory;
     uint256 public tenor;
     uint256 public principalAmount;
     uint256 public collateralAmount;
@@ -74,9 +36,6 @@ contract Loan is Ownable {
     uint256 public lowerRequiredMargin;
     uint256 public higherRequiredMargin;
     uint256 public lastMarginTime;
-    uint256 public marginLeadTime;
-    uint256 public matureLeadTime;
-    uint256 public interestLeadTime;
     uint256 public constant INTEREST_DIVISOR = 10000;
     bytes32 public constant INTEREST_CURRENCY = 0x4c4e44;
     bytes32 public borrowerUserId;
@@ -96,29 +55,30 @@ contract Loan is Ownable {
 
     event Transfer(bytes32 from, bytes32 to, uint256 amount, bytes32 currency, uint256 transferRecordsId, string functionName);
 
+    modifier onlyOwner() {
+        require(msg.sender == loanFactory.owner());
+        _;
+    }
+
     modifier onlyWorker() {
-        require(msg.sender == worker);
+        require(msg.sender == loanFactory.worker());
         _;
     }
 
     constructor(
-        uint256[10] newLoanUintInput,
-        bytes32[8] newLoanBytesInput,
-        address _owner,
-        address _worker
+        uint256[7] newLoanUintInput,
+        bytes32[8] newLoanBytesInput
     )
         public
     {
+        loanFactory = LoanFactory(msg.sender);
         tenor = newLoanUintInput[0];
         principalAmount = newLoanUintInput[1];
         collateralAmount = newLoanUintInput[2];
         createdTime = newLoanUintInput[3];
         lowerRequiredMargin = newLoanUintInput[4];
         higherRequiredMargin = newLoanUintInput[5];
-        marginLeadTime = newLoanUintInput[6];
-        lastMarginTime = newLoanUintInput[7];
-        matureLeadTime = newLoanUintInput[8];
-        interestLeadTime = newLoanUintInput[9];
+        lastMarginTime = newLoanUintInput[6];
         borrowerUserId = newLoanBytesInput[0];
         holdingUserId = newLoanBytesInput[1];
         escrowUserId = newLoanBytesInput[2];
@@ -127,33 +87,10 @@ contract Loan is Ownable {
         orderId = newLoanBytesInput[5];
         principalCurrency = newLoanBytesInput[6];
         collateralCurrency = newLoanBytesInput[7];
-        owner = _owner;
-        worker = _worker;
     }
 
     function() external {
         revert();
-    }
-
-    function changeWorker(address _worker)
-        external
-        onlyOwner
-    {
-        worker = _worker;
-    }
-
-    function changeMarginLeadTime(uint256 _marginLeadTime)
-        external
-        onlyOwner
-    {
-        marginLeadTime = _marginLeadTime;
-    }
-
-    function changeMatureLeadTime(uint256 _matureLeadTime)
-        external
-        onlyOwner
-    {
-        matureLeadTime = _matureLeadTime;
     }
 
     function changeInterest(uint256 paymentTime, uint256 amount, bool paid, uint256 interestId)
@@ -259,7 +196,7 @@ contract Loan is Ownable {
     {
         require(status == LoanStatus.Active);
         require(interest[interestId].paid == false);
-        require(now > interest[interestId].paymentTime + interestLeadTime);
+        require(now > interest[interestId].paymentTime + loanFactory.interestLeadTime(collateralCurrency));
         require(transferRecords[transferRecordsId - 1] == DEFAULT_TRANSFER_RECORD);
         emit Transfer(
             escrowUserId,
@@ -280,7 +217,7 @@ contract Loan is Ownable {
         higherRequiredMargin = _higherRequiredMargin;
         lastMarginTime = _lastMarginTime;
         require(collateralAmount < lowerRequiredMargin);
-        require(now > lastMarginTime + marginLeadTime);
+        require(now > lastMarginTime + loanFactory.marginLeadTime(collateralCurrency));
         status = LoanStatus.MarginCallInDefault;
         emit Transfer(
             escrowUserId,
@@ -336,7 +273,7 @@ contract Loan is Ownable {
         onlyWorker
     {
         require(status == LoanStatus.Matured);
-        require(now >= createdTime + tenor + matureLeadTime);
+        require(now >= createdTime + tenor + loanFactory.matureLeadTime(collateralCurrency));
         require(transferRecords[transferRecordsId - 1] == DEFAULT_TRANSFER_RECORD);
         status = LoanStatus.PrincipalRepaymentDefault;
         emit Transfer(
@@ -366,12 +303,21 @@ contract Loan is Ownable {
 }
 
 
-contract LoanFactory is Ownable {
+contract LoanFactory {
+    address public owner;
     address public worker;
     address[] public loans;
     uint256 public loanId;
+    mapping(bytes32 => uint256) public marginLeadTime;
+    mapping(bytes32 => uint256) public matureLeadTime;
+    mapping(bytes32 => uint256) public interestLeadTime;
 
     event NewLoan(address indexed loan, uint256 loanId);
+
+    modifier onlyOwner() {
+        require(msg.sender == owner);
+        _;
+    }
 
     modifier onlyWorker() {
         require(msg.sender == worker);
@@ -379,12 +325,20 @@ contract LoanFactory is Ownable {
     }
 
     constructor() public {
+        owner = msg.sender;
         worker = msg.sender;
         loans.length = 1;
     }
 
     function() external {
         revert();
+    }
+
+    function changeOwner(address _owner)
+        external
+        onlyOwner
+    {
+        owner = _owner;
     }
 
     function changeWorker(address _worker)
@@ -394,14 +348,35 @@ contract LoanFactory is Ownable {
         worker = _worker;
     }
 
+    function changeMarginLeadTime(bytes32 collateralCurrency, uint256 _marginLeadTime)
+        external
+        onlyOwner
+    {
+        marginLeadTime[collateralCurrency] = _marginLeadTime;
+    }
+
+    function changeMatureLeadTime(bytes32 collateralCurrency, uint256 _matureLeadTime)
+        external
+        onlyOwner
+    {
+        matureLeadTime[collateralCurrency] = _matureLeadTime;
+    }
+
+    function changeInterestLeadTime(bytes32 collateralCurrency, uint256 _interestLeadTime)
+        external
+        onlyOwner
+    {
+        interestLeadTime[collateralCurrency] = _interestLeadTime;
+    }
+
     function newLoan(
-        uint256[10] newLoanUintInput,
+        uint256[7] newLoanUintInput,
         bytes32[8] newLoanBytesInput
     )
         external
         onlyOwner
     {
-        Loan loan = new Loan(newLoanUintInput, newLoanBytesInput, owner, worker);
+        Loan loan = new Loan(newLoanUintInput, newLoanBytesInput);
         loans.push(loan);
         loanId++;
         emit NewLoan(loan, loanId);
