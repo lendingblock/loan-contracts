@@ -1,8 +1,11 @@
 pragma solidity 0.4.24;
 
 import "./LoanFactory.sol";
+import "./SafeMath.sol";
 
 contract Loan {
+    using SafeMath for uint256;
+
     enum LoanStatus {
         Pending,
         Active,
@@ -180,11 +183,12 @@ contract Loan {
         }
         require(interest[interestId].paid == false);
         require(now >= interest[interestId].paymentTime);
+        uint256 interestToPay = interest[interestId].amount.mul(lenders[i].weight).div(INTEREST_DIVISOR);
         for (uint256 i = 0; i < lenders.length; i++) {
             emit Transfer(
                 borrowerUserId,
                 lenders[i].lenderUserId,
-                interest[interestId].amount * lenders[i].weight / INTEREST_DIVISOR,
+                interestToPay,
                 INTEREST_CURRENCY,
                 transferRecordsId++,
                 "payInterest"
@@ -240,7 +244,7 @@ contract Loan {
         higherRequiredMargin = _higherRequiredMargin;
         lastMarginTime = _lastMarginTime;
         require(collateralAmount > _higherRequiredMargin);
-        uint256 releaseAmount = collateralAmount - (lowerRequiredMargin + higherRequiredMargin) / 2;
+        uint256 releaseAmount = collateralAmount.sub((lowerRequiredMargin.add(higherRequiredMargin)).div(2));
         emit Transfer(
             escrowUserId,
             borrowerUserId,
@@ -249,7 +253,7 @@ contract Loan {
             transferRecordsId++,
             "marginExcess"
         );
-        collateralAmount -= releaseAmount;
+        collateralAmount = collateralAmount.sub(releaseAmount);
     }
 
     function mature()
