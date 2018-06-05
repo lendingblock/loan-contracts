@@ -9,11 +9,10 @@ contract Loan {
     enum LoanStatus {
         Pending,
         Active,
-        InterestPaymentInDefault,
+        InterestPayment,
         MarginCall,
         MarginCallInDefault,
         PrincipalRepaymentDefault,
-        Liquidated,
         Matured,
         Completed
     }
@@ -41,7 +40,7 @@ contract Loan {
     uint256 public lowerRequiredMargin;
     uint256 public higherRequiredMargin;
     uint256 public lastMarginTime;
-    uint256 public constant INTEREST_DIVISOR = 10000;
+    uint256 public constant WEIGHT_DIVISOR = 10000;
     bytes32 public constant INTEREST_CURRENCY = 0x4c4e44;
     bytes32 public borrowerUserId;
     bytes32 public holdingUserId;
@@ -137,8 +136,7 @@ contract Loan {
 
     function addInterest(
         uint256[] paymentTime,
-        uint256[] amount,
-        bool[] paid
+        uint256[] amount
     )
         external
         onlyWorker
@@ -148,7 +146,7 @@ contract Loan {
             interest.push(Interest({
                 paymentTime: paymentTime[i],
                 amount: amount[i],
-                paid: paid[i]
+                paid: false
             }));
         }
     }
@@ -183,8 +181,9 @@ contract Loan {
         }
         require(interest[interestId].paid == false);
         require(now >= interest[interestId].paymentTime);
-        uint256 interestToPay = interest[interestId].amount.mul(lenders[i].weight).div(INTEREST_DIVISOR);
+        status = LoanStatus.InterestPayment;
         for (uint256 i = 0; i < lenders.length; i++) {
+            uint256 interestToPay = interest[interestId].amount.mul(lenders[i].weight).div(WEIGHT_DIVISOR);
             emit Transfer(
                 borrowerUserId,
                 lenders[i].lenderUserId,
@@ -196,14 +195,29 @@ contract Loan {
         }
     }
 
+    function interestPaid(uint256 interestId)
+        external
+        onlyWorker
+    {
+        require(status == LoanStatus.InterestPayment);
+        if (interestId > 0) {
+            require(interest[interestId - 1].paid == true);
+        }
+        require(interest[interestId].paid == false);
+        require(transferRecords.length == transferRecordsId);
+        require(transferRecords[transferRecordsId - 1] != DEFAULT_TRANSFER_RECORD);
+        status = LoanStatus.Active;
+    }
+
     function interestDefault(uint256 interestId, uint256 liquidateCollateralAmount)
         external
         onlyWorker
     {
-        require(status == LoanStatus.Active);
+        require(status == LoanStatus.InterestPayment);
         require(interest[interestId].paid == false);
         require(now > interest[interestId].paymentTime + loanFactory.interestLeadTime(collateralCurrency));
         require(transferRecords[transferRecordsId - 1] == DEFAULT_TRANSFER_RECORD);
+        status = LoanStatus.Active;
         emit Transfer(
             escrowUserId,
             liquidatorUserId,
@@ -212,6 +226,7 @@ contract Loan {
             transferRecordsId++,
             "interestDefault"
         );
+        collateralAmount = collateralAmount.sub(liquidateCollateralAmount);
     }
 
     function marginDefault(uint256 _lowerRequiredMargin, uint256 _higherRequiredMargin, uint256 _lastMarginTime)
@@ -292,18 +307,53 @@ contract Loan {
         );
     }
 
-    function complete()
+    function completeLiquidation(uint256 principalRecovered)
         external
         onlyWorker
     {
+        require(status == LoanStatus.MarginCallInDefault || status == LoanStatus.PrincipalRepaymentDefault);
         require(transferRecords.length == transferRecordsId);
         require(transferRecords[transferRecordsId - 1] != DEFAULT_TRANSFER_RECORD);
-        if (status == LoanStatus.Matured) {
-            status = LoanStatus.Completed;
-        } else if (status == LoanStatus.PrincipalRepaymentDefault) {
-            status = LoanStatus.Completed;
-        } else {
-            revert();
+        status = LoanStatus.Completed;
+        for (uint256 i = 0; i < lenders.length; i++) {
+            uint256 principalToReturn = principalRecovered.mul(lenders[i].weight).div(WEIGHT_DIVISOR);
+            emit Transfer(
+                escrowUserId,
+                lenders[i].lenderUserId,
+                principalToReturn,
+                principalCurrency,
+                transferRecordsId++,
+                "completeLiquidation"
+            );
+        }
+    }
+
+    function completeMature()
+        external
+        onlyWorker
+    {
+        require(status == LoanStatus.Matured);
+        require(transferRecords.length == transferRecordsId);
+        require(transferRecords[transferRecordsId - 1] != DEFAULT_TRANSFER_RECORD);
+        status = LoanStatus.Completed;
+        emit Transfer(
+            escrowUserId,
+            borrowerUserId,
+            collateralAmount,
+            collateralCurrency,
+            transferRecordsId++,
+            "complete"
+        );
+        for (uint256 i = 0; i < lenders.length; i++) {
+            uint256 principalToReturn = principalAmount.mul(lenders[i].weight).div(WEIGHT_DIVISOR);
+            emit Transfer(
+                escrowUserId,
+                lenders[i].lenderUserId,
+                principalToReturn,
+                principalCurrency,
+                transferRecordsId++,
+                "complete"
+            );
         }
     }
 }
