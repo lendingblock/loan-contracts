@@ -10,9 +10,7 @@ contract Loan {
         Pending,
         Active,
         InterestPayment,
-        MarginCall,
-        MarginCallInDefault,
-        PrincipalRepaymentDefault,
+        Liquidated,
         Matured,
         Completed
     }
@@ -53,11 +51,11 @@ contract Loan {
     LoanStatus public status;
     Lender[] public lenders;
     Interest[] public interest;
-    uint256 public transferRecordsId;
-    bytes32[] public transferRecords;
-    bytes32 public constant DEFAULT_TRANSFER_RECORD = 0xdeadbeef;
+    uint256 public totalExpectedTransfers;
+    bytes32[] public transferOutcomeRecords;
+    bytes32 public constant TRANSFER_NOT_SENT = 0x4e4f545f53454e54;
 
-    event Transfer(bytes32 from, bytes32 to, uint256 amount, bytes32 currency, uint256 transferRecordsId, string functionName);
+    event ExpectedTransfer(bytes32 from, bytes32 to, uint256 amount, bytes32 currency, uint256 totalExpectedTransfers, string functionName);
 
     modifier onlyOwner() {
         require(msg.sender == loanFactory.owner());
@@ -113,6 +111,13 @@ contract Loan {
         status = _status;
     }
 
+    function changeTransferOutcomeRecords(bytes32 _transferOutcomeRecords, uint256 transferOutcomeRecordsId)
+        external
+        onlyOwner
+    {
+        transferOutcomeRecords[transferOutcomeRecordsId] = _transferOutcomeRecords;
+    }
+
 
     function addLenders(
         uint256[] lenderUintInput,
@@ -157,18 +162,18 @@ contract Loan {
     {
         require(status == LoanStatus.Pending);
         status = LoanStatus.Active;
-        emit Transfer(holdingUserId, borrowerUserId, principalAmount, principalCurrency, transferRecordsId++, "start");
-        emit Transfer(holdingUserId, escrowUserId, collateralAmount, collateralCurrency, transferRecordsId++, "start");
+        emit ExpectedTransfer(holdingUserId, borrowerUserId, principalAmount, principalCurrency, totalExpectedTransfers++, "start");
+        emit ExpectedTransfer(holdingUserId, escrowUserId, collateralAmount, collateralCurrency, totalExpectedTransfers++, "start");
     }
 
-    function addTransferRecords(bytes32[] _transferRecords)
+    function addTransferOutcomeRecords(bytes32[] _transferOutcomeRecords)
         external
         onlyWorker
     {
-        for (uint256 i = 0; i < _transferRecords.length; i++) {
-            transferRecords.push(_transferRecords[i]);
+        for (uint256 i = 0; i < _transferOutcomeRecords.length; i++) {
+            transferOutcomeRecords.push(_transferOutcomeRecords[i]);
         }
-        require(transferRecords.length <= transferRecordsId);
+        require(transferOutcomeRecords.length <= totalExpectedTransfers);
     }
 
     function payInterest(uint256 interestId)
@@ -184,12 +189,12 @@ contract Loan {
         status = LoanStatus.InterestPayment;
         for (uint256 i = 0; i < lenders.length; i++) {
             uint256 interestToPay = interest[interestId].amount.mul(lenders[i].weight).div(WEIGHT_DIVISOR);
-            emit Transfer(
+            emit ExpectedTransfer(
                 borrowerUserId,
                 lenders[i].lenderUserId,
                 interestToPay,
                 INTEREST_CURRENCY,
-                transferRecordsId++,
+                totalExpectedTransfers++,
                 "payInterest"
             );
         }
@@ -200,12 +205,9 @@ contract Loan {
         onlyWorker
     {
         require(status == LoanStatus.InterestPayment);
-        if (interestId > 0) {
-            require(interest[interestId - 1].paid == true);
-        }
-        require(interest[interestId].paid == false);
-        require(transferRecords.length == transferRecordsId);
-        require(transferRecords[transferRecordsId - 1] != DEFAULT_TRANSFER_RECORD);
+        require(isOutcomeRecordsUpdated() == true);
+        require(isLastOutcomeRecordSent() == true);
+        interest[interestId].paid = true;
         status = LoanStatus.Active;
     }
 
@@ -214,16 +216,16 @@ contract Loan {
         onlyWorker
     {
         require(status == LoanStatus.InterestPayment);
-        require(interest[interestId].paid == false);
         require(now > interest[interestId].paymentTime + loanFactory.interestLeadTime(collateralCurrency));
-        require(transferRecords[transferRecordsId - 1] == DEFAULT_TRANSFER_RECORD);
+        require(isOutcomeRecordsUpdated() == true);
+        require(isLastOutcomeRecordSent() == false);
         status = LoanStatus.Active;
-        emit Transfer(
+        emit ExpectedTransfer(
             escrowUserId,
             liquidatorUserId,
             liquidateCollateralAmount,
             collateralCurrency,
-            transferRecordsId++,
+            totalExpectedTransfers++,
             "interestDefault"
         );
         collateralAmount = collateralAmount.sub(liquidateCollateralAmount);
@@ -239,13 +241,13 @@ contract Loan {
         lastMarginTime = _lastMarginTime;
         require(collateralAmount < lowerRequiredMargin);
         require(now > lastMarginTime + loanFactory.marginLeadTime(collateralCurrency));
-        status = LoanStatus.MarginCallInDefault;
-        emit Transfer(
+        status = LoanStatus.Liquidated;
+        emit ExpectedTransfer(
             escrowUserId,
             liquidatorUserId,
             collateralAmount,
             collateralCurrency,
-            transferRecordsId++,
+            totalExpectedTransfers++,
             "marginDefault"
         );
     }
@@ -259,16 +261,35 @@ contract Loan {
         higherRequiredMargin = _higherRequiredMargin;
         lastMarginTime = _lastMarginTime;
         require(collateralAmount > _higherRequiredMargin);
-        uint256 releaseAmount = collateralAmount.sub((lowerRequiredMargin.add(higherRequiredMargin)).div(2));
-        emit Transfer(
+        uint256 returnAmount = collateralAmount.sub((lowerRequiredMargin.add(higherRequiredMargin)).div(2));
+        emit ExpectedTransfer(
             escrowUserId,
             borrowerUserId,
-            releaseAmount,
+            returnAmount,
             collateralCurrency,
-            transferRecordsId++,
+            totalExpectedTransfers++,
             "marginExcess"
         );
-        collateralAmount = collateralAmount.sub(releaseAmount);
+        collateralAmount = collateralAmount.sub(returnAmount);
+    }
+
+    function addMargin(uint256 _lowerRequiredMargin, uint256 _higherRequiredMargin, uint256 _lastMarginTime, uint256 collateralAdded)
+        external
+        onlyWorker
+    {
+        require(status == LoanStatus.Active);
+        lowerRequiredMargin = _lowerRequiredMargin;
+        higherRequiredMargin = _higherRequiredMargin;
+        lastMarginTime = _lastMarginTime;
+        emit ExpectedTransfer(
+            borrowerUserId,
+            escrowUserId,
+            collateralAdded,
+            collateralCurrency,
+            totalExpectedTransfers++,
+            "addMargin"
+        );
+        collateralAmount = collateralAmount.add(collateralAdded);
     }
 
     function mature()
@@ -277,14 +298,14 @@ contract Loan {
     {
         require(status == LoanStatus.Active);
         require(now >= createdTime + tenor);
-        require(transferRecords.length == transferRecordsId);
+        require(isOutcomeRecordsUpdated() == true);
         status = LoanStatus.Matured;
-        emit Transfer(
+        emit ExpectedTransfer(
             borrowerUserId,
             escrowUserId,
             principalAmount,
             principalCurrency,
-            transferRecordsId++,
+            totalExpectedTransfers++,
             "mature"
         );
     }
@@ -295,14 +316,15 @@ contract Loan {
     {
         require(status == LoanStatus.Matured);
         require(now >= createdTime + tenor + loanFactory.matureLeadTime(collateralCurrency));
-        require(transferRecords[transferRecordsId - 1] == DEFAULT_TRANSFER_RECORD);
-        status = LoanStatus.PrincipalRepaymentDefault;
-        emit Transfer(
+        require(isOutcomeRecordsUpdated() == true);
+        require(isLastOutcomeRecordSent() == false);
+        status = LoanStatus.Liquidated;
+        emit ExpectedTransfer(
             escrowUserId,
             liquidatorUserId,
             collateralAmount,
             collateralCurrency,
-            transferRecordsId++,
+            totalExpectedTransfers++,
             "matureDefault"
         );
     }
@@ -311,18 +333,18 @@ contract Loan {
         external
         onlyWorker
     {
-        require(status == LoanStatus.MarginCallInDefault || status == LoanStatus.PrincipalRepaymentDefault);
-        require(transferRecords.length == transferRecordsId);
-        require(transferRecords[transferRecordsId - 1] != DEFAULT_TRANSFER_RECORD);
+        require(status == LoanStatus.Liquidated);
+        require(isOutcomeRecordsUpdated() == true);
+        require(isLastOutcomeRecordSent() == true);
         status = LoanStatus.Completed;
         for (uint256 i = 0; i < lenders.length; i++) {
             uint256 principalToReturn = principalRecovered.mul(lenders[i].weight).div(WEIGHT_DIVISOR);
-            emit Transfer(
+            emit ExpectedTransfer(
                 escrowUserId,
                 lenders[i].lenderUserId,
                 principalToReturn,
                 principalCurrency,
-                transferRecordsId++,
+                totalExpectedTransfers++,
                 "completeLiquidation"
             );
         }
@@ -333,27 +355,51 @@ contract Loan {
         onlyWorker
     {
         require(status == LoanStatus.Matured);
-        require(transferRecords.length == transferRecordsId);
-        require(transferRecords[transferRecordsId - 1] != DEFAULT_TRANSFER_RECORD);
+        require(isOutcomeRecordsUpdated() == true);
+        require(isLastOutcomeRecordSent() == true);
         status = LoanStatus.Completed;
-        emit Transfer(
+        emit ExpectedTransfer(
             escrowUserId,
             borrowerUserId,
             collateralAmount,
             collateralCurrency,
-            transferRecordsId++,
-            "complete"
+            totalExpectedTransfers++,
+            "completeMature"
         );
         for (uint256 i = 0; i < lenders.length; i++) {
             uint256 principalToReturn = principalAmount.mul(lenders[i].weight).div(WEIGHT_DIVISOR);
-            emit Transfer(
+            emit ExpectedTransfer(
                 escrowUserId,
                 lenders[i].lenderUserId,
                 principalToReturn,
                 principalCurrency,
-                transferRecordsId++,
-                "complete"
+                totalExpectedTransfers++,
+                "completeMature"
             );
+        }
+    }
+
+    function isOutcomeRecordsUpdated()
+        public
+        view
+        returns (bool)
+    {
+        if (transferOutcomeRecords.length == totalExpectedTransfers) {
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    function isLastOutcomeRecordSent()
+        public
+        view
+        returns (bool)
+    {
+        if (transferOutcomeRecords[totalExpectedTransfers - 1] != TRANSFER_NOT_SENT) {
+            return true;
+        } else {
+            return false;
         }
     }
 }
