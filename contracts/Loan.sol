@@ -1,7 +1,7 @@
 pragma solidity 0.4.24;
 
 import "./LoanFactory.sol";
-import "./SafeMath.sol";
+import "./lib/SafeMath.sol";
 
 contract Loan {
     using SafeMath for uint256;
