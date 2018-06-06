@@ -20,8 +20,9 @@ contract Loan {
         bytes32 orderId;
         bytes32 lenderUserId;
         uint256 amount;
-        uint256 price;
-        uint256 weight;
+        uint256 rate;
+        uint256 amountWeight;
+        uint256 rateWeight;
     }
 
     struct Interest {
@@ -127,14 +128,15 @@ contract Loan {
         onlyWorker
     {
         require(status == LoanStatus.Pending);
-        for (uint256 i = 0; i < lenderUintInput.length / 3; i++) {
+        for (uint256 i = 0; i < lenderUintInput.length / 4; i++) {
             lenders.push(Lender({
                 id: lenderBytesInput[3 * i + 0],
                 orderId: lenderBytesInput[3 * i + 1],
                 lenderUserId: lenderBytesInput[3 * i + 2],
-                amount: lenderUintInput[3 * i + 0],
-                price: lenderUintInput[3 * i + 1],
-                weight: lenderUintInput[3 * i + 2]
+                amount: lenderUintInput[4 * i + 0],
+                rate: lenderUintInput[4 * i + 1],
+                amountWeight: lenderUintInput[4 * i + 2],
+                rateWeight: lenderUintInput[4 * i + 3]
             }));
         }
     }
@@ -188,7 +190,7 @@ contract Loan {
         require(now >= interest[interestId].paymentTime);
         status = LoanStatus.InterestPayment;
         for (uint256 i = 0; i < lenders.length; i++) {
-            uint256 interestToPay = interest[interestId].amount.mul(lenders[i].weight).div(WEIGHT_DIVISOR);
+            uint256 interestToPay = interest[interestId].amount.mul(lenders[i].rateWeight).div(WEIGHT_DIVISOR);
             emit ExpectedTransfer(
                 borrowerUserId,
                 lenders[i].lenderUserId,
@@ -338,7 +340,7 @@ contract Loan {
         require(isLastOutcomeRecordSent() == true);
         status = LoanStatus.Completed;
         for (uint256 i = 0; i < lenders.length; i++) {
-            uint256 principalToReturn = principalRecovered.mul(lenders[i].weight).div(WEIGHT_DIVISOR);
+            uint256 principalToReturn = principalRecovered.mul(lenders[i].amountWeight).div(WEIGHT_DIVISOR);
             emit ExpectedTransfer(
                 escrowUserId,
                 lenders[i].lenderUserId,
@@ -367,7 +369,7 @@ contract Loan {
             "completeMature"
         );
         for (uint256 i = 0; i < lenders.length; i++) {
-            uint256 principalToReturn = principalAmount.mul(lenders[i].weight).div(WEIGHT_DIVISOR);
+            uint256 principalToReturn = principalAmount.mul(lenders[i].amountWeight).div(WEIGHT_DIVISOR);
             emit ExpectedTransfer(
                 escrowUserId,
                 lenders[i].lenderUserId,

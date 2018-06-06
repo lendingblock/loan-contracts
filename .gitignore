@@ -2,5 +2,7 @@
 node_modules/*
 coverage/*
 build/*
+coverageEnv/*
 coverage.json
+scTopics
 *.log
