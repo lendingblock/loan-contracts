@@ -70,12 +70,23 @@ contract LoanFactory {
 
     function newLoan(
         uint256[7] newLoanUintInput,
-        bytes32[8] newLoanBytesInput
+        bytes32[8] newLoanBytesInput,
+        uint256[] paymentTimes,
+        uint256[] amounts,
+        uint256[] lenderUintInput,
+        bytes32[] lenderBytesInput
     )
         external
         onlyOwner
     {
-        Loan loan = new Loan(newLoanUintInput, newLoanBytesInput);
+        Loan loan = new Loan(
+          newLoanUintInput, 
+          newLoanBytesInput,
+          paymentTimes,
+          amounts,
+          lenderUintInput,
+          lenderBytesInput
+        );
         loans.push(loan);
         loanId++;
         emit NewLoan(loan, loanId);
