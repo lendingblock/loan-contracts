@@ -1,6 +1,6 @@
 pragma solidity 0.4.24;
 
-contract Ownable {
+contract Sample {
     address public owner;
 
     constructor () public {
