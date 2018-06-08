@@ -95,8 +95,8 @@ contract Loan {
         principalCurrency = newLoanBytesInput[6];
         collateralCurrency = newLoanBytesInput[7];
 
-        addInterest(interestPaymentTimes, interestAmounts);
-        addLenders(lenderUintInput, lenderBytesInput);
+        _addInterest(interestPaymentTimes, interestAmounts);
+        _addLenders(lenderUintInput, lenderBytesInput);
         start();
     }
 
@@ -127,8 +127,17 @@ contract Loan {
         transferOutcomeRecords[transferOutcomeRecordsId] = _transferOutcomeRecords;
     }
 
-
     function addLenders(
+        uint256[] lenderUintInput,
+        bytes32[] lenderBytesInput
+    )
+        external
+        onlyWorker
+    {
+      _addLenders(lenderUintInput, lenderBytesInput);
+    }
+
+    function _addLenders(
         uint256[] lenderUintInput,
         bytes32[] lenderBytesInput
     )
@@ -149,6 +158,16 @@ contract Loan {
     }
 
     function addInterest(
+        uint256[] paymentTime,
+        uint256[] amount
+    )
+        external
+        onlyWorker
+    {
+      _addInterest(paymentTime, amount);
+    }
+
+    function _addInterest(
         uint256[] paymentTime,
         uint256[] amount
     )
