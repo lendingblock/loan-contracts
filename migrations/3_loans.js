@@ -1,5 +1,8 @@
 var LoanFactory = artifacts.require("./LoanFactory.sol");
 
+const LENDERS_COUNT = 20;
+const INTERESTS_COUNT = 12;
+
 const loanByteInput = [
   '31536000',
   '5000000000',
@@ -22,7 +25,7 @@ const loanIntInput = [
 
 let interestPaymentTimes = [];
 let interestAmounts = [];
-for (let i = 0; i < 3; i++) {
+for (let i = 0; i < INTERESTS_COUNT; i++) {
     interestPaymentTimes.push(
         web3.toBigNumber('1528188800')
         .add(web3.toBigNumber(i).times('86400').times('30'))
@@ -36,7 +39,7 @@ for (let i = 0; i < 3; i++) {
 
 let lenderByteInput = [];
 let lenderIntInput = [];
-for (let i = 0; i < 10; i++) {
+for (let i = 0; i < LENDERS_COUNT; i++) {
     //id
     lenderByteInput.push(web3.sha3(i.toString()));
     //orderId
