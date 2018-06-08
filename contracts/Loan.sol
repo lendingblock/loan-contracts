@@ -70,7 +70,11 @@ contract Loan {
 
     constructor(
         uint256[7] newLoanUintInput,
-        bytes32[8] newLoanBytesInput
+        bytes32[8] newLoanBytesInput,
+        uint256[] interestPaymentTimes,
+        uint256[] interestAmounts,
+        uint256[] lenderUintInput,
+        bytes32[] lenderBytesInput
     )
         public
     {
@@ -90,6 +94,10 @@ contract Loan {
         orderId = newLoanBytesInput[5];
         principalCurrency = newLoanBytesInput[6];
         collateralCurrency = newLoanBytesInput[7];
+
+        _addInterest(interestPaymentTimes, interestAmounts);
+        _addLenders(lenderUintInput, lenderBytesInput);
+        start();
     }
 
     function() external {
@@ -98,7 +106,7 @@ contract Loan {
 
     function changeInterest(uint256 paymentTime, uint256 amount, bool paid, uint256 interestId)
         external
-        onlyOwner
+        //onlyOwner
     {
         interest[interestId].paymentTime = paymentTime;
         interest[interestId].amount = amount;
@@ -119,13 +127,21 @@ contract Loan {
         transferOutcomeRecords[transferOutcomeRecordsId] = _transferOutcomeRecords;
     }
 
-
     function addLenders(
         uint256[] lenderUintInput,
         bytes32[] lenderBytesInput
     )
         external
         onlyWorker
+    {
+      _addLenders(lenderUintInput, lenderBytesInput);
+    }
+
+    function _addLenders(
+        uint256[] lenderUintInput,
+        bytes32[] lenderBytesInput
+    )
+        private
     {
         require(status == LoanStatus.Pending);
         for (uint256 i = 0; i < lenderUintInput.length / 4; i++) {
@@ -148,6 +164,15 @@ contract Loan {
         external
         onlyWorker
     {
+      _addInterest(paymentTime, amount);
+    }
+
+    function _addInterest(
+        uint256[] paymentTime,
+        uint256[] amount
+    )
+        private
+    {
         require(status == LoanStatus.Pending);
         for (uint256 i = 0; i < paymentTime.length; i++) {
             interest.push(Interest({
@@ -159,8 +184,7 @@ contract Loan {
     }
 
     function start()
-        external
-        onlyWorker
+        private
     {
         require(status == LoanStatus.Pending);
         status = LoanStatus.Active;
