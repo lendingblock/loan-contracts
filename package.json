@@ -24,6 +24,7 @@
     "truffle": "4.1.11"
   },
   "devDependencies": {
+    "eth-gas-reporter": "0.1.7",
     "solidity-coverage": "0.5",
     "solium": "1.1"
   }
