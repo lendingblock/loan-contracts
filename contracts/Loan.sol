@@ -1,11 +1,8 @@
 pragma solidity 0.4.24;
 
 import "./LoanFactory.sol";
-import "./lib/SafeMath.sol";
 
 contract Loan {
-    using SafeMath for uint256;
-
     enum LoanStatus {
         Pending,
         Active,
@@ -58,13 +55,8 @@ contract Loan {
 
     event ExpectedTransfer(bytes32 from, bytes32 to, uint256 amount, bytes32 currency, uint256 totalExpectedTransfers, string functionName);
 
-    modifier onlyOwner() {
-        require(msg.sender == loanFactory.owner());
-        _;
-    }
-
-    modifier onlyWorker() {
-        require(msg.sender == loanFactory.worker());
+    modifier onlyLoanFactory() {
+        require(msg.sender == address(loanFactory));
         _;
     }
 
@@ -98,7 +90,7 @@ contract Loan {
 
     function changeInterest(uint256 paymentTime, uint256 amount, bool paid, uint256 interestId)
         external
-        onlyOwner
+        onlyLoanFactory
     {
         interest[interestId].paymentTime = paymentTime;
         interest[interestId].amount = amount;
@@ -107,25 +99,48 @@ contract Loan {
 
     function changeStatus(LoanStatus _status)
         external
-        onlyOwner
+        onlyLoanFactory
     {
         status = _status;
     }
 
+    function changeInterestPaid(uint256 interestId)
+        external
+        onlyLoanFactory
+    {
+        require(interest[interestId].paid == false);
+        interest[interestId].paid = true;
+    }
+
+    function changeCollateralAmount(uint256 _collateralAmount)
+        external
+        onlyLoanFactory
+    {
+        collateralAmount = _collateralAmount;
+    }
+
+    function changeMargin(uint256 _lowerRequiredMargin, uint256 _higherRequiredMargin, uint256 _lastMarginTime)
+        external
+        onlyLoanFactory
+    {
+        lowerRequiredMargin = _lowerRequiredMargin;
+        higherRequiredMargin = _higherRequiredMargin;
+        lastMarginTime = _lastMarginTime;
+    }
+
     function changeTransferOutcomeRecords(bytes32 _transferOutcomeRecords, uint256 transferOutcomeRecordsId)
         external
-        onlyOwner
+        onlyLoanFactory
     {
         transferOutcomeRecords[transferOutcomeRecordsId] = _transferOutcomeRecords;
     }
-
 
     function addLenders(
         uint256[] lenderUintInput,
         bytes32[] lenderBytesInput
     )
         external
-        onlyWorker
+        onlyLoanFactory
     {
         require(status == LoanStatus.Pending);
         for (uint256 i = 0; i < lenderUintInput.length / 4; i++) {
@@ -146,7 +161,7 @@ contract Loan {
         uint256[] amount
     )
         external
-        onlyWorker
+        onlyLoanFactory
     {
         require(status == LoanStatus.Pending);
         for (uint256 i = 0; i < paymentTime.length; i++) {
@@ -158,227 +173,21 @@ contract Loan {
         }
     }
 
-    function start()
+    function emitExpectedTransfer(bytes32 from, bytes32 to, uint256 amount, bytes32 currency, string functionName)
         external
-        onlyWorker
+        onlyLoanFactory
     {
-        require(status == LoanStatus.Pending);
-        status = LoanStatus.Active;
-        emit ExpectedTransfer(holdingUserId, borrowerUserId, principalAmount, principalCurrency, totalExpectedTransfers++, "start");
-        emit ExpectedTransfer(holdingUserId, escrowUserId, collateralAmount, collateralCurrency, totalExpectedTransfers++, "start");
+        emit ExpectedTransfer(from, to, amount, currency, totalExpectedTransfers++, functionName);
     }
 
     function addTransferOutcomeRecords(bytes32[] _transferOutcomeRecords)
         external
-        onlyWorker
+        onlyLoanFactory
     {
         for (uint256 i = 0; i < _transferOutcomeRecords.length; i++) {
             transferOutcomeRecords.push(_transferOutcomeRecords[i]);
         }
         require(transferOutcomeRecords.length <= totalExpectedTransfers);
-    }
-
-    function payInterest(uint256 interestId)
-        external
-        onlyWorker
-    {
-        require(status == LoanStatus.Active);
-        if (interestId > 0) {
-            require(interest[interestId - 1].paid == true);
-        }
-        require(interest[interestId].paid == false);
-        require(now >= interest[interestId].paymentTime);
-        status = LoanStatus.InterestPayment;
-        for (uint256 i = 0; i < lenders.length; i++) {
-            uint256 interestToPay = interest[interestId].amount.mul(lenders[i].rateWeight).div(WEIGHT_DIVISOR);
-            emit ExpectedTransfer(
-                borrowerUserId,
-                lenders[i].lenderUserId,
-                interestToPay,
-                INTEREST_CURRENCY,
-                totalExpectedTransfers++,
-                "payInterest"
-            );
-        }
-    }
-
-    function interestPaid(uint256 interestId)
-        external
-        onlyWorker
-    {
-        require(status == LoanStatus.InterestPayment);
-        require(isOutcomeRecordsUpdated() == true);
-        require(isLastOutcomeRecordSent() == true);
-        interest[interestId].paid = true;
-        status = LoanStatus.Active;
-    }
-
-    function interestDefault(uint256 interestId, uint256 liquidateCollateralAmount)
-        external
-        onlyWorker
-    {
-        require(status == LoanStatus.InterestPayment);
-        require(now > interest[interestId].paymentTime + loanFactory.interestLeadTime(collateralCurrency));
-        require(isOutcomeRecordsUpdated() == true);
-        require(isLastOutcomeRecordSent() == false);
-        status = LoanStatus.Active;
-        emit ExpectedTransfer(
-            escrowUserId,
-            liquidatorUserId,
-            liquidateCollateralAmount,
-            collateralCurrency,
-            totalExpectedTransfers++,
-            "interestDefault"
-        );
-        collateralAmount = collateralAmount.sub(liquidateCollateralAmount);
-    }
-
-    function marginDefault(uint256 _lowerRequiredMargin, uint256 _higherRequiredMargin, uint256 _lastMarginTime)
-        external
-        onlyWorker
-    {
-        require(status == LoanStatus.Active);
-        lowerRequiredMargin = _lowerRequiredMargin;
-        higherRequiredMargin = _higherRequiredMargin;
-        lastMarginTime = _lastMarginTime;
-        require(collateralAmount < lowerRequiredMargin);
-        require(now > lastMarginTime + loanFactory.marginLeadTime(collateralCurrency));
-        status = LoanStatus.Liquidated;
-        emit ExpectedTransfer(
-            escrowUserId,
-            liquidatorUserId,
-            collateralAmount,
-            collateralCurrency,
-            totalExpectedTransfers++,
-            "marginDefault"
-        );
-    }
-
-    function marginExcess(uint256 _lowerRequiredMargin, uint256 _higherRequiredMargin, uint256 _lastMarginTime)
-        external
-        onlyWorker
-    {
-        require(status == LoanStatus.Active);
-        lowerRequiredMargin = _lowerRequiredMargin;
-        higherRequiredMargin = _higherRequiredMargin;
-        lastMarginTime = _lastMarginTime;
-        require(collateralAmount > _higherRequiredMargin);
-        uint256 returnAmount = collateralAmount.sub((lowerRequiredMargin.add(higherRequiredMargin)).div(2));
-        emit ExpectedTransfer(
-            escrowUserId,
-            borrowerUserId,
-            returnAmount,
-            collateralCurrency,
-            totalExpectedTransfers++,
-            "marginExcess"
-        );
-        collateralAmount = collateralAmount.sub(returnAmount);
-    }
-
-    function addMargin(uint256 _lowerRequiredMargin, uint256 _higherRequiredMargin, uint256 _lastMarginTime, uint256 collateralAdded)
-        external
-        onlyWorker
-    {
-        require(status == LoanStatus.Active);
-        lowerRequiredMargin = _lowerRequiredMargin;
-        higherRequiredMargin = _higherRequiredMargin;
-        lastMarginTime = _lastMarginTime;
-        emit ExpectedTransfer(
-            borrowerUserId,
-            escrowUserId,
-            collateralAdded,
-            collateralCurrency,
-            totalExpectedTransfers++,
-            "addMargin"
-        );
-        collateralAmount = collateralAmount.add(collateralAdded);
-    }
-
-    function mature()
-        external
-        onlyWorker
-    {
-        require(status == LoanStatus.Active);
-        require(now >= createdTime + tenor);
-        require(isOutcomeRecordsUpdated() == true);
-        status = LoanStatus.Matured;
-        emit ExpectedTransfer(
-            borrowerUserId,
-            escrowUserId,
-            principalAmount,
-            principalCurrency,
-            totalExpectedTransfers++,
-            "mature"
-        );
-    }
-
-    function matureDefault()
-        external
-        onlyWorker
-    {
-        require(status == LoanStatus.Matured);
-        require(now >= createdTime + tenor + loanFactory.matureLeadTime(collateralCurrency));
-        require(isOutcomeRecordsUpdated() == true);
-        require(isLastOutcomeRecordSent() == false);
-        status = LoanStatus.Liquidated;
-        emit ExpectedTransfer(
-            escrowUserId,
-            liquidatorUserId,
-            collateralAmount,
-            collateralCurrency,
-            totalExpectedTransfers++,
-            "matureDefault"
-        );
-    }
-
-    function completeLiquidation(uint256 principalRecovered)
-        external
-        onlyWorker
-    {
-        require(status == LoanStatus.Liquidated);
-        require(isOutcomeRecordsUpdated() == true);
-        require(isLastOutcomeRecordSent() == true);
-        status = LoanStatus.Completed;
-        for (uint256 i = 0; i < lenders.length; i++) {
-            uint256 principalToReturn = principalRecovered.mul(lenders[i].amountWeight).div(WEIGHT_DIVISOR);
-            emit ExpectedTransfer(
-                escrowUserId,
-                lenders[i].lenderUserId,
-                principalToReturn,
-                principalCurrency,
-                totalExpectedTransfers++,
-                "completeLiquidation"
-            );
-        }
-    }
-
-    function completeMature()
-        external
-        onlyWorker
-    {
-        require(status == LoanStatus.Matured);
-        require(isOutcomeRecordsUpdated() == true);
-        require(isLastOutcomeRecordSent() == true);
-        status = LoanStatus.Completed;
-        emit ExpectedTransfer(
-            escrowUserId,
-            borrowerUserId,
-            collateralAmount,
-            collateralCurrency,
-            totalExpectedTransfers++,
-            "completeMature"
-        );
-        for (uint256 i = 0; i < lenders.length; i++) {
-            uint256 principalToReturn = principalAmount.mul(lenders[i].amountWeight).div(WEIGHT_DIVISOR);
-            emit ExpectedTransfer(
-                escrowUserId,
-                lenders[i].lenderUserId,
-                principalToReturn,
-                principalCurrency,
-                totalExpectedTransfers++,
-                "completeMature"
-            );
-        }
     }
 
     function isOutcomeRecordsUpdated()
@@ -403,5 +212,29 @@ contract Loan {
         } else {
             return false;
         }
+    }
+
+    function lendersLength()
+        public
+        view
+        returns (uint256)
+    {
+        return lenders.length;
+    }
+
+    function lendersMember(uint256 lendersId)
+        public
+        view
+        returns (bytes32, uint256, uint256)
+    {
+        return (lenders[lendersId].lenderUserId, lenders[lendersId].amountWeight, lenders[lendersId].rateWeight);
+    }
+
+    function interestMember(uint256 interestId)
+        public
+        view
+        returns (uint256, uint256, bool)
+    {
+        return (interest[interestId].paymentTime, interest[interestId].amount, interest[interestId].paid);
     }
 }
