@@ -7,11 +7,33 @@ contract LoanFactory {
     address public worker;
     address[] public loans;
     uint256 public loanId;
-    mapping(bytes32 => uint256) public marginLeadTime;
-    mapping(bytes32 => uint256) public matureLeadTime;
-    mapping(bytes32 => uint256) public interestLeadTime;
 
-    event NewLoan(address indexed loan, uint256 loanId);
+    struct Lender {
+        bytes32 id;
+        bytes32 orderId;
+        bytes32 lenderUserId;
+        uint256 amount;
+        uint256 rate;
+        uint256 amountWeight;
+        uint256 rateWeight;
+    }
+
+    struct Interest {
+        uint256 paymentTime;
+        uint256 amount;
+        bool paid;
+    }
+
+    /*
+     * Event names follow the pattern `resource`-`action`.
+     */
+    event LoanCreated(
+      bytes32 borrowerUserId,
+      bytes32 market,
+      uint256 principalAmount,
+      uint256 collateralAmount,
+      string loanMeta
+    );
 
     modifier onlyOwner() {
         require(msg.sender == owner);
@@ -29,8 +51,31 @@ contract LoanFactory {
         loans.length = 1;
     }
 
-    function() external {
-        revert();
+    /*
+     * @dev Create new loansome variables were commented out
+     * because we hit the stack size limit of the EVM
+     * We might have to compress several array element into one
+     * to solve the issue
+     */
+    function createLoan(
+        bytes32 borrowerUserId,
+        bytes32 market,
+        uint256 principalAmount,
+        uint256 collateralAmount,
+        string loanMeta
+    )
+        external
+        onlyOwner
+    {
+        Loan loan = new Loan(loanId++);
+        loans.push(loan);
+        emit LoanCreated(
+          borrowerUserId,
+          market,
+          principalAmount,
+          collateralAmount,
+          loanMeta
+        );
     }
 
     function changeOwner(address _owner)
@@ -47,48 +92,7 @@ contract LoanFactory {
         worker = _worker;
     }
 
-    function changeMarginLeadTime(bytes32 collateralCurrency, uint256 _marginLeadTime)
-        external
-        onlyOwner
-    {
-        marginLeadTime[collateralCurrency] = _marginLeadTime;
-    }
-
-    function changeMatureLeadTime(bytes32 collateralCurrency, uint256 _matureLeadTime)
-        external
-        onlyOwner
-    {
-        matureLeadTime[collateralCurrency] = _matureLeadTime;
-    }
-
-    function changeInterestLeadTime(bytes32 collateralCurrency, uint256 _interestLeadTime)
-        external
-        onlyOwner
-    {
-        interestLeadTime[collateralCurrency] = _interestLeadTime;
-    }
-
-    function newLoan(
-        uint256[7] newLoanUintInput,
-        bytes32[8] newLoanBytesInput,
-        uint256[] paymentTimes,
-        uint256[] amounts,
-        uint256[] lenderUintInput,
-        bytes32[] lenderBytesInput
-    )
-        external
-        onlyOwner
-    {
-        Loan loan = new Loan(
-          newLoanUintInput, 
-          newLoanBytesInput,
-          paymentTimes,
-          amounts,
-          lenderUintInput,
-          lenderBytesInput
-        );
-        loans.push(loan);
-        loanId++;
-        emit NewLoan(loan, loanId);
+    function() external {
+        revert();
     }
 }
