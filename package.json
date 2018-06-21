@@ -21,7 +21,11 @@
   },
   "homepage": "https://github.com/lendingblock/loan-contracts",
   "dependencies": {
-    "truffle": "4.1.11"
+    "bluebird": "^3.5.1",
+    "lodash": "^4.17.10",
+    "truffle": "4.1.11",
+    "truffle-test-utils": "^0.1.0",
+    "web3": "^1.0.0-beta.34"
   },
   "devDependencies": {
     "eth-gas-reporter": "0.1.7",
