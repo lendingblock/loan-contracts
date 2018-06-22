@@ -1,17 +1,18 @@
 const LoanFactory = artifacts.require('LoanFactory');
-const {assertEvent, loanGenerator} = require('./utils.js');
+const {assertEventContain, assertEventFired, loanGenerator} = require('./utils.js');
 
 contract('Loan', (accounts) => {
   it('should emit `LoanCreated` event with correct parameters  when `createLoan()` is called', async () => {
     const loanFactory = await LoanFactory.deployed();
     const loan = loanGenerator();
     const tx = await loanFactory.createLoan(...(loan.formatToContractArgs()));
-    console.log(`Gas Used: ${tx.receipt.gasUsed}`);
-    assertEvent(tx, {fieldName: 'borrowerUserId'}, loan.borrowerUserId);
-    assertEvent(tx, {fieldName: 'market'}, loan.market);
-    assertEvent(tx, {fieldName: 'principalAmount', fieldType: 'uint'}, loan.principalAmount);
-    assertEvent(tx, {fieldName: 'collateralAmount', fieldType: 'uint'}, loan.collateralAmount);
-    assertEvent(tx, {fieldName: 'loanMeta', fieldType: 'string'}, loan.metaJSON);
+
+    assertEventFired(tx, 'LoanCreated');
+    assertEventContain(tx, {fieldName: 'borrowerUserId'}, loan.borrowerUserId);
+    assertEventContain(tx, {fieldName: 'market'}, loan.market);
+    assertEventContain(tx, {fieldName: 'principalAmount', fieldType: 'uint'}, loan.principalAmount);
+    assertEventContain(tx, {fieldName: 'collateralAmount', fieldType: 'uint'}, loan.collateralAmount);
+    assertEventContain(tx, {fieldName: 'loanMeta', fieldType: 'string'}, loan.metaJSON);
   });
 
 });
