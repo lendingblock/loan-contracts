@@ -28,11 +28,11 @@ contract LoanFactory {
      * Event names follow the pattern `resource`-`action`.
      */
     event LoanCreated(
-      bytes32 borrowerUserId,
-      bytes32 market,
-      uint256 principalAmount,
-      uint256 collateralAmount,
-      string loanMeta
+        bytes32 borrowerUserId,
+        bytes32 market,
+        uint256 principalAmount,
+        uint256 collateralAmount,
+        string loanMeta
     );
 
     modifier onlyOwner() {
@@ -70,11 +70,11 @@ contract LoanFactory {
         Loan loan = new Loan(loanId++);
         loans.push(loan);
         emit LoanCreated(
-          borrowerUserId,
-          market,
-          principalAmount,
-          collateralAmount,
-          loanMeta
+            borrowerUserId,
+            market,
+            principalAmount,
+            collateralAmount,
+            loanMeta
         );
     }
 

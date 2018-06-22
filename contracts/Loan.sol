@@ -39,30 +39,30 @@ contract Loan {
      */
 
     event TransferExpected(
-      bytes32 from, 
-      bytes32 to, 
-      uint256 amount, 
-      bytes32 currency, 
-      string reason
+        bytes32 from, 
+        bytes32 to, 
+        uint256 amount, 
+        bytes32 currency, 
+        string reason
     );
 
     event TransferObserved(
-      bytes32 from, 
-      bytes32 to, 
-      uint256 amount, 
-      bytes32 currency, 
-      string reason
+        bytes32 from, 
+        bytes32 to, 
+        uint256 amount, 
+        bytes32 currency, 
+        string reason
     );
 
     event InterestChanged(
-      uint256 interestId, 
-      uint256 paymentTime, 
-      uint256 amount, 
-      bool paid
+        uint256 interestId, 
+        uint256 paymentTime, 
+        uint256 amount, 
+        bool paid
     );
 
     event StatusChanged(
-      LoanStatus status
+        LoanStatus status
     );
 
     modifier onlyOwner() {
@@ -76,7 +76,7 @@ contract Loan {
     }
 
     function getWorker() public view returns(address, address) {
-      return (msg.sender, loanFactory.worker());
+        return (msg.sender, loanFactory.worker());
     }
 
     constructor(uint256 _id) public {
@@ -91,7 +91,7 @@ contract Loan {
         external
         onlyWorker
     {
-      _expectTransfer(from, to, amount, currency, reason);
+        _expectTransfer(from, to, amount, currency, reason);
     }
 
 
@@ -102,34 +102,34 @@ contract Loan {
         external
         onlyWorker
     {
-      emit TransferObserved(
-        from, 
-        to, 
-        amount, 
-        currency, 
-        reason
-      );
+        emit TransferObserved(
+            from, 
+            to, 
+            amount, 
+            currency, 
+            reason
+        );
     }
 
     function changeStatus(LoanStatus status)
         external
         onlyOwner
     {
-      emit StatusChanged(
-        status
-      );
+        emit StatusChanged(
+            status
+        );  
     }
 
     function changeInterest(uint256 paymentTime, uint256 amount, bool paid, uint256 interestId)
         external
         onlyOwner
     {
-      emit InterestChanged(
-        interestId, 
-        paymentTime, 
-        amount, 
-        paid
-      );
+        emit InterestChanged(
+            interestId, 
+            paymentTime, 
+            amount, 
+            paid
+        );
     }
 
     /*
@@ -145,7 +145,7 @@ contract Loan {
     {
         Lender[] memory lenders = new Lender[](20);
         for (uint256 i = 0; i < lenderUintInput.length / 4; i++) {
-            lenders[i] =Lender({
+            lenders[i] = Lender({
                 id: lenderBytesInput[3 * i + 0],
                 orderId: lenderBytesInput[3 * i + 1],
                 lenderUserId: lenderBytesInput[3 * i + 2],
@@ -186,13 +186,13 @@ contract Loan {
     function _expectTransfer(bytes32 from, bytes32 to, uint256 amount, bytes32 currency, string reason) 
       internal
     {
-      emit TransferExpected(
-        from, 
-        to, 
-        amount, 
-        currency, 
-        reason
-      );
+        emit TransferExpected(
+            from, 
+            to, 
+            amount, 
+            currency, 
+            reason
+        );
     }
 
     function() external {
