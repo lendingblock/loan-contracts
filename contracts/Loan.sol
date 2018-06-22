@@ -133,14 +133,15 @@ contract Loan {
     }
 
     /*
-     * @dev Used internally in constructor to build a lenders array
-     * used in `NewLoan` event
+     # @DEPRECATED
+     * @dev build lenders array - used before in constructor to create an event
      */
     function _addLenders(
         uint256[] lenderUintInput,
         bytes32[] lenderBytesInput
     )
         private
+        pure
         returns(Lender[])
     {
         Lender[] memory lenders = new Lender[](20);
@@ -159,14 +160,15 @@ contract Loan {
     }
 
     /*
-     * @dev Used internally in constructor to build a interests array
-     * used in `NewLoan` event
+     # @DEPRECATED
+     * @dev build interests array - used before in constructor to create an event
      */
     function _addInterests(
         uint256[] paymentTimes,
         uint256[] amounts
     )
         private
+        pure
         returns(Interest[])
     {
         Interest[] memory interests = new Interest[](20);
