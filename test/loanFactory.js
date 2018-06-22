@@ -2,7 +2,7 @@ const LoanFactory = artifacts.require('LoanFactory');
 const {assertEvent, loanGenerator} = require('./utils.js');
 
 contract('Loan', (accounts) => {
-  it('should create NewLoan event with parameters of loan created', async () => {
+  it('should emit `LoanCreated` event with correct parameters  when `createLoan()` is called', async () => {
     const loanFactory = await LoanFactory.deployed();
     const loan = loanGenerator();
     const tx = await loanFactory.createLoan(...(loan.formatToContractArgs()));
