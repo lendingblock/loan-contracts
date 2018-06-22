@@ -1,4 +1,3 @@
-//truffle objects
 const LoanFactory = artifacts.require('LoanFactory');
 const {assertEvent, loanGenerator} = require('./utils.js');
 
