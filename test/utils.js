@@ -11,7 +11,7 @@ const web3Latest = new Web3Latest();
  *                   logIndex: Integer
  *                 }
  */
-const assertEvent = (tx, filter, value) => {
+const assertEventContain = (tx, filter, value) => {
   filter = Object.assign({}, {logIndex: 0, fieldType: 'bytes32'}, filter);
   const result = tx.logs[filter.logIndex].args[filter.fieldName];
 
@@ -27,6 +27,17 @@ const assertEvent = (tx, filter, value) => {
   }
 
   assert.equal(result, expected);
+}
+
+/**
+ * @description Assert an event as fired
+ * @param tx - Object: the transaction object
+ * @param eventName - String: Name of the event to check
+ * @param index - Integer: Index of the event in the transaction logs
+ *                         First event to fire is index 0, etc..
+ */
+const assertEventFired = (tx, eventName, index = 0) => {
+  assert.equal(tx.logs[index].event, eventName);
 }
 
 class Loan {
@@ -126,6 +137,7 @@ const loanGenerator = () => {
 }
 
 module.exports = {
-  assertEvent,
+  assertEventFired,
+  assertEventContain,
   loanGenerator
 };
