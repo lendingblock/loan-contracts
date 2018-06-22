@@ -29,6 +29,103 @@ const assertEvent = (tx, filter, value) => {
   assert.equal(result, expected);
 }
 
+class Loan {
+  constructor(config = {}) {
+    this.config = this.parseConfig(config);
+
+    this.borrowerUserId = this.config.borrowerUserId;
+    this.market = this.formatMarket(this.config);
+    this.principalAmount = this.config.principalAmount;
+    this.collateralAmount = this.config.collateralAmount;
+
+    const interests = this.generateInterests(this.config)
+    const lenders = this.generateLenders(this.config)
+    this.meta = this.generateMeta(this.config, lenders)
+    this.metaJSON = JSON.stringify(this.meta);
+  }
+
+  parseConfig(config) {
+    return Object.assign({}, {
+      tenor: 365,
+      principalCurrency: 'BTC',
+      collateralCurrency: 'ETH',
+      lowerRequiredMargin: 0.8,
+      higherRequiredMargin: 1.2,
+      principalAmount: Math.pow(10, 8), //10^8 satoshis = 1 BTC
+      collateralAmount: 12 * Math.pow(10, 18), //10^18 = 1 ether
+      lastMarginTime: null,
+      borrowerUserId: 'borrowerUserId',
+      holdingUserId: 'holdingUserId',
+      escrowUserId: 'escrowUserId',
+      liquidatorUserId: 'liquidatorUserId',
+      lendersCount: 20,
+      interestsCount: 12
+    }, config);
+  }
+
+  generateInterests(config) {
+    const interests = [];
+    for (let i = 0; i < config.interestsCount; i++) {
+      const paymentTime = web3
+        .toBigNumber('1528188800')
+        .add(web3.toBigNumber(i).times('86400').times('30'))
+        .toNumber();
+      const interestAmounts = web3
+        .toBigNumber('10000000000000000000000')
+        .toNumber();
+      const interest = {
+        paymentTime,
+        interestAmounts
+      };
+      interests.push(interest);
+    };
+    return interests;
+  }
+
+  generateLenders(config) {
+    const lenders = [];
+    for (let i = 0; i < config.lendersCount; i++) {
+      const lender = {
+        id: web3.sha3(i.toString()),
+        orderId: web3.sha3((i * 33).toString()),
+        lenderUserId: web3.sha3((i * 77).toString()),
+        amount: web3.toBigNumber('700000000000000000000').dividedBy(50).toString(),
+        amountWeight: web3.toBigNumber('500').toString(),
+        rateWeight: web3.toBigNumber('10000').dividedBy(50).toString()
+      }
+      lenders.push(lender);
+    }
+    return lenders;
+  }
+
+  generateMeta(config, lenders, interests) {
+    return Object.assign({}, config, {
+      lenders,
+      interests
+    });
+  }
+
+  formatMarket(config) {
+    return `${config.principalCurrency}/${config.collateralCurrency}-${config.tenor}`;
+  }
+
+  formatToContractArgs() {
+    return [
+      this.borrowerUserId,
+      this.market,
+      this.principalAmount,
+      this.collateralAmount,
+      this.metaJSON
+    ];
+  }
+
+}
+
+const loanGenerator = () => {
+  return new Loan();
+}
+
 module.exports = {
-  assertEvent
+  assertEvent,
+  loanGenerator
 };
