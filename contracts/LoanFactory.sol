@@ -28,6 +28,7 @@ contract LoanFactory {
      * Event names follow the pattern `resource`-`action`.
      */
     event LoanCreated(
+        address contractAddress,
         bytes32 borrowerUserId,
         bytes32 market,
         uint256 principalAmount,
@@ -70,6 +71,7 @@ contract LoanFactory {
         Loan loan = new Loan(loanId++);
         loans.push(loan);
         emit LoanCreated(
+            loan, //loan address
             borrowerUserId,
             market,
             principalAmount,
