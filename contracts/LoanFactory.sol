@@ -4,10 +4,15 @@ import "./Loan.sol";
 
 contract LoanFactory {
     address public owner;
-    address public newOwner;
+    address public pendingOwner;
     address public worker;
     uint256 public loanCount;
 
+    event AccessChanged (
+        string access,
+        address previous,
+        address current
+    );
     /*
      * Event names follow the pattern `resource`-`action`.
      */
@@ -76,25 +81,29 @@ contract LoanFactory {
         );
     }
 
-    function changeOwner(address _newOwner)
+    function changeOwner(address _pendingOwner)
         external
         onlyOwner
     {
-        newOwner = _newOwner;
+        emit AccessChanged("pendingOwner", pendingOwner, _pendingOwner);
+        pendingOwner = _pendingOwner;
     }
 
     function acceptOwner()
         external
     {
-        require(msg.sender == newOwner);
-        owner = newOwner;
-        newOwner = 0x0;
+        require(msg.sender == pendingOwner);
+        emit AccessChanged("owner", owner, pendingOwner);
+        emit AccessChanged("pendingOwner", pendingOwner, 0x0);
+        owner = pendingOwner;
+        pendingOwner = 0x0;
     }
 
     function changeWorker(address _worker)
         external
         onlyOwner
     {
+        emit AccessChanged("worker", worker, _worker);
         worker = _worker;
     }
 
