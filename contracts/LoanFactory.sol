@@ -57,7 +57,7 @@ contract LoanFactory {
         string loanMeta
     )
         external
-        onlyOwner
+        onlyWorker
     {
         Loan loan = new Loan(loanId);
         loanCount++;

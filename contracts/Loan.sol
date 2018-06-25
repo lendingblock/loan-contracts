@@ -11,25 +11,25 @@ contract Loan {
      */
 
     event TransferExpected(
-        bytes32 from, 
-        bytes32 to, 
-        uint256 amount, 
-        bytes32 currency, 
+        bytes32 from,
+        bytes32 to,
+        uint256 amount,
+        bytes32 currency,
         string reason
     );
 
     event TransferObserved(
-        bytes32 from, 
-        bytes32 to, 
-        uint256 amount, 
-        bytes32 currency, 
+        bytes32 from,
+        bytes32 to,
+        uint256 amount,
+        bytes32 currency,
         string reason
     );
 
     event InterestChanged(
-        uint256 interestId, 
-        uint256 paymentTime, 
-        uint256 amount, 
+        uint256 interestId,
+        uint256 paymentTime,
+        uint256 amount,
         bool paid
     );
 
@@ -59,15 +59,15 @@ contract Loan {
     /*
      * @dev We expect a transfer on Ethereum or another blockchain
      */
-    function expectTransfer(bytes32 from, bytes32 to, uint256 amount, bytes32 currency, string reason) 
+    function expectTransfer(bytes32 from, bytes32 to, uint256 amount, bytes32 currency, string reason)
         external
         onlyWorker
     {
         emit TransferExpected(
-            from, 
-            to, 
-            amount, 
-            currency, 
+            from,
+            to,
+            amount,
+            currency,
             reason
         );
     }
@@ -75,26 +75,26 @@ contract Loan {
     /*
      * @dev We witnessed a transfer on Ethereum or another blockchain
      */
-    function observeTransfer(bytes32 from, bytes32 to, uint256 amount, bytes32 currency, string reason) 
+    function observeTransfer(bytes32 from, bytes32 to, uint256 amount, bytes32 currency, string reason)
         external
         onlyWorker
     {
         emit TransferObserved(
-            from, 
-            to, 
-            amount, 
-            currency, 
+            from,
+            to,
+            amount,
+            currency,
             reason
         );
     }
 
     function changeStatus(string status)
         external
-        onlyOwner
+        onlyWorker
     {
         emit StatusChanged(
             status
-        );  
+        );
     }
 
     function changeInterest(uint256 paymentTime, uint256 amount, bool paid, uint256 interestId)
@@ -102,9 +102,9 @@ contract Loan {
         onlyOwner
     {
         emit InterestChanged(
-            interestId, 
-            paymentTime, 
-            amount, 
+            interestId,
+            paymentTime,
+            amount,
             paid
         );
     }
