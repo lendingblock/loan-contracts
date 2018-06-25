@@ -20,6 +20,15 @@ contract LoanFactory {
         string loanMeta
     );
 
+    /*
+     * Grace period after a payment instruction, in seconds
+     */
+    event LeadTimeChanged {
+      bytes32 market,
+      bytes32 leadTimeType, //can be for margin, interest or principal repayment
+      uint256 leadTime,
+    };
+
     modifier onlyOwner() {
         require(msg.sender == owner);
         _;
@@ -76,6 +85,17 @@ contract LoanFactory {
         onlyOwner
     {
         worker = _worker;
+    }
+
+    function changeLeadtime(bytes32 market, bytes32 leadTimeType, uint256 leadTime)
+        external
+        onlyOwner
+    {
+        emit LeadTimeChanged(
+            market,
+            leadTimeType,
+            leadTime
+        );
     }
 
     function() external {
