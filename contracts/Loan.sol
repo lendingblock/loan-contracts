@@ -1,36 +1,8 @@
 pragma solidity 0.4.24;
 
 import "./LoanFactory.sol";
-import "./lib/SafeMath.sol";
 
 contract Loan {
-    using SafeMath for uint256;
-
-    enum LoanStatus {
-        Pending,
-        Active,
-        InterestPayment,
-        Liquidated,
-        Matured,
-        Completed
-    }
-
-    struct Lender {
-        bytes32 id;
-        bytes32 orderId;
-        bytes32 lenderUserId;
-        uint256 amount;
-        uint256 rate;
-        uint256 amountWeight;
-        uint256 rateWeight;
-    }
-
-    struct Interest {
-        uint256 paymentTime;
-        uint256 amount;
-        bool paid;
-    }
-
     LoanFactory public loanFactory;
     uint256 public id;
 
@@ -62,7 +34,7 @@ contract Loan {
     );
 
     event StatusChanged(
-        LoanStatus status
+        string status
     );
 
     modifier onlyOwner() {
@@ -91,9 +63,14 @@ contract Loan {
         external
         onlyWorker
     {
-        _expectTransfer(from, to, amount, currency, reason);
+        emit TransferExpected(
+            from, 
+            to, 
+            amount, 
+            currency, 
+            reason
+        );
     }
-
 
     /*
      * @dev We witnessed a transfer on Ethereum or another blockchain
@@ -111,7 +88,7 @@ contract Loan {
         );
     }
 
-    function changeStatus(LoanStatus status)
+    function changeStatus(string status)
         external
         onlyOwner
     {
@@ -129,71 +106,6 @@ contract Loan {
             paymentTime, 
             amount, 
             paid
-        );
-    }
-
-    /*
-     # @DEPRECATED
-     * @dev build lenders array - used before in constructor to create an event
-     */
-    function _addLenders(
-        uint256[] lenderUintInput,
-        bytes32[] lenderBytesInput
-    )
-        private
-        pure
-        returns(Lender[])
-    {
-        Lender[] memory lenders = new Lender[](20);
-        for (uint256 i = 0; i < lenderUintInput.length / 4; i++) {
-            lenders[i] = Lender({
-                id: lenderBytesInput[3 * i + 0],
-                orderId: lenderBytesInput[3 * i + 1],
-                lenderUserId: lenderBytesInput[3 * i + 2],
-                amount: lenderUintInput[4 * i + 0],
-                rate: lenderUintInput[4 * i + 1],
-                amountWeight: lenderUintInput[4 * i + 2],
-                rateWeight: lenderUintInput[4 * i + 3]
-            });
-        }
-        return lenders;
-    }
-
-    /*
-     # @DEPRECATED
-     * @dev build interests array - used before in constructor to create an event
-     */
-    function _addInterests(
-        uint256[] paymentTimes,
-        uint256[] amounts
-    )
-        private
-        pure
-        returns(Interest[])
-    {
-        Interest[] memory interests = new Interest[](20);
-        for (uint256 i = 0; i < paymentTimes.length; i++) {
-            interests[i] = Interest({
-                paymentTime: paymentTimes[i],
-                amount: amounts[i],
-                paid: false
-            });
-        }
-        return interests;
-    }
-
-    /*
-     * @dev Used internally in constructor
-     */
-    function _expectTransfer(bytes32 from, bytes32 to, uint256 amount, bytes32 currency, string reason) 
-      internal
-    {
-        emit TransferExpected(
-            from, 
-            to, 
-            amount, 
-            currency, 
-            reason
         );
     }
 

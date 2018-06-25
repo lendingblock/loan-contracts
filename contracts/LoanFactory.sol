@@ -8,22 +8,6 @@ contract LoanFactory {
     address[] public loans;
     uint256 public loanId;
 
-    struct Lender {
-        bytes32 id;
-        bytes32 orderId;
-        bytes32 lenderUserId;
-        uint256 amount;
-        uint256 rate;
-        uint256 amountWeight;
-        uint256 rateWeight;
-    }
-
-    struct Interest {
-        uint256 paymentTime;
-        uint256 amount;
-        bool paid;
-    }
-
     /*
      * Event names follow the pattern `resource`-`action`.
      */
