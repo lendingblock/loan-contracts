@@ -15,7 +15,8 @@ contract Loan {
         bytes32 to,
         uint256 amount,
         bytes32 currency,
-        string reason
+        string reason,
+        uint256 timestamp
     );
 
     event TransferObserved(
@@ -23,18 +24,21 @@ contract Loan {
         bytes32 to,
         uint256 amount,
         bytes32 currency,
-        string reason
+        string reason,
+        uint256 timestamp
     );
 
     event InterestChanged(
         uint256 interestId,
         uint256 paymentTime,
         uint256 amount,
-        bool paid
+        bool paid,
+        uint256 timestamp
     );
 
     event StatusChanged(
-        string status
+        string status,
+        uint256 timestamp
     );
 
     modifier onlyOwner() {
@@ -59,7 +63,7 @@ contract Loan {
     /*
      * @dev We expect a transfer on Ethereum or another blockchain
      */
-    function expectTransfer(bytes32 from, bytes32 to, uint256 amount, bytes32 currency, string reason)
+    function expectTransfer(bytes32 from, bytes32 to, uint256 amount, bytes32 currency, string reason, uint256 timestamp)
         external
         onlyWorker
     {
@@ -68,14 +72,15 @@ contract Loan {
             to,
             amount,
             currency,
-            reason
+            reason,
+            timestamp
         );
     }
 
     /*
      * @dev We witnessed a transfer on Ethereum or another blockchain
      */
-    function observeTransfer(bytes32 from, bytes32 to, uint256 amount, bytes32 currency, string reason)
+    function observeTransfer(bytes32 from, bytes32 to, uint256 amount, bytes32 currency, string reason, uint256 timestamp)
         external
         onlyWorker
     {
@@ -84,20 +89,22 @@ contract Loan {
             to,
             amount,
             currency,
-            reason
+            reason,
+            timestamp
         );
     }
 
-    function changeStatus(string status)
+    function changeStatus(string status, uint256 timestamp)
         external
         onlyWorker
     {
         emit StatusChanged(
-            status
+            status,
+            timestamp
         );
     }
 
-    function changeInterest(uint256 paymentTime, uint256 amount, bool paid, uint256 interestId)
+    function changeInterest(uint256 paymentTime, uint256 amount, bool paid, uint256 interestId, uint256 timestamp)
         external
         onlyOwner
     {
@@ -105,7 +112,8 @@ contract Loan {
             interestId,
             paymentTime,
             amount,
-            paid
+            paid,
+            timestamp
         );
     }
 

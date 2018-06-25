@@ -5,9 +5,10 @@ const {assertEventContain, assertEventFired, loanGenerator} = require('./utils.j
 contract('Loan', (accounts) => {
   it('should emit `TransferExpected` event with correct parameters when `expectTransfer()` called', async () => {
     //Create a new loan contract
+    const timestamp = new Date().getTime();
     const loanFactory = await LoanFactory.deployed();
     const loan = loanGenerator();
-    const _tx = await loanFactory.createLoan(...(loan.formatToContractArgs()));
+    const _tx = await loanFactory.createLoan(...(loan.formatToContractArgs()), timestamp);
 
     //Call `expectTransfer() on it
     const address = _tx.logs[0].args.contractAddress;
@@ -16,7 +17,8 @@ contract('Loan', (accounts) => {
       loan.meta.holdingUserId,
       loan.meta.collateralAmount,
       loan.meta.collateralCurrency,
-      'initiation'
+      'initiation',
+      timestamp
     );
 
     assertEventFired(tx, 'TransferExpected');
@@ -25,6 +27,7 @@ contract('Loan', (accounts) => {
     assertEventContain(tx, {fieldName: 'amount', fieldType: 'uint'}, loan.meta.collateralAmount);
     assertEventContain(tx, {fieldName: 'currency', fieldType: 'bytes32'}, loan.meta.collateralCurrency);
     assertEventContain(tx, {fieldName: 'reason', fieldType: 'string'}, 'initiation');
+    assertEventContain(tx, {fieldName: 'timestamp', fieldType: 'uint'}, timestamp);
   });
 
 });

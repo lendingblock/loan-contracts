@@ -17,7 +17,8 @@ contract LoanFactory {
         bytes32 market, //Principal/collareral-tenor. ex: BTC/ETH-30D
         uint256 principalAmount,
         uint256 collateralAmount,
-        string loanMeta
+        string loanMeta,
+        uint256 timestamp
     );
 
     /*
@@ -26,7 +27,8 @@ contract LoanFactory {
     event LeadTimeChanged (
       bytes32 market,
       bytes32 leadTimeType, //can be for margin, interest or principal repayment
-      uint256 leadTime
+      uint256 leadTime,
+      uint256 timestamp
     );
 
     modifier onlyOwner() {
@@ -55,7 +57,8 @@ contract LoanFactory {
         bytes32 market,
         uint256 principalAmount,
         uint256 collateralAmount,
-        string loanMeta
+        string loanMeta,
+        uint256 timestamp
     )
         external
         onlyWorker
@@ -68,7 +71,8 @@ contract LoanFactory {
             market,
             principalAmount,
             collateralAmount,
-            loanMeta
+            loanMeta,
+            timestamp
         );
     }
 
@@ -94,14 +98,15 @@ contract LoanFactory {
         worker = _worker;
     }
 
-    function changeLeadtime(bytes32 market, bytes32 leadTimeType, uint256 leadTime)
+    function changeLeadtime(bytes32 market, bytes32 leadTimeType, uint256 leadTime, uint256 timestamp)
         external
         onlyOwner
     {
         emit LeadTimeChanged(
             market,
             leadTimeType,
-            leadTime
+            leadTime,
+            timestamp
         );
     }
 
