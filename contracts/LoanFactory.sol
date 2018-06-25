@@ -4,6 +4,7 @@ import "./Loan.sol";
 
 contract LoanFactory {
     address public owner;
+    address public newOwner;
     address public worker;
     uint256 public loanCount;
 
@@ -71,11 +72,19 @@ contract LoanFactory {
         );
     }
 
-    function changeOwner(address _owner)
+    function changeOwner(address _newOwner)
         external
         onlyOwner
     {
-        owner = _owner;
+        newOwner = _newOwner;
+    }
+
+    function acceptOwner()
+        external
+    {
+        require(msg.sender == newOwner);
+        owner = newOwner;
+        newOwner = 0x0;
     }
 
     function changeWorker(address _worker)
