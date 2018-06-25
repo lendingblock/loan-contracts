@@ -5,16 +5,15 @@ import "./Loan.sol";
 contract LoanFactory {
     address public owner;
     address public worker;
-    address[] public loans;
-    uint256 public loanId;
+    uint256 public loanCount;
 
     /*
      * Event names follow the pattern `resource`-`action`.
      */
-    event LoanCreated(
+    event LoanCreated (
         address contractAddress,
-        bytes32 borrowerUserId,
-        bytes32 market,
+        bytes32 id,
+        bytes32 market, //Principal/collareral-tenor. ex: BTC/ETH-30D
         uint256 principalAmount,
         uint256 collateralAmount,
         string loanMeta
@@ -23,11 +22,11 @@ contract LoanFactory {
     /*
      * Grace period after a payment instruction, in seconds
      */
-    event LeadTimeChanged {
+    event LeadTimeChanged (
       bytes32 market,
       bytes32 leadTimeType, //can be for margin, interest or principal repayment
-      uint256 leadTime,
-    };
+      uint256 leadTime
+    );
 
     modifier onlyOwner() {
         require(msg.sender == owner);
@@ -42,7 +41,6 @@ contract LoanFactory {
     constructor() public {
         owner = msg.sender;
         worker = msg.sender;
-        loans.length = 1;
     }
 
     /*
@@ -52,7 +50,7 @@ contract LoanFactory {
      * to solve the issue
      */
     function createLoan(
-        bytes32 borrowerUserId,
+        bytes32 loanId,
         bytes32 market,
         uint256 principalAmount,
         uint256 collateralAmount,
@@ -61,11 +59,11 @@ contract LoanFactory {
         external
         onlyOwner
     {
-        Loan loan = new Loan(loanId++);
-        loans.push(loan);
+        Loan loan = new Loan(loanId);
+        loanCount++;
         emit LoanCreated(
-            loan, //loan address
-            borrowerUserId,
+            loan,
+            loanId, //loan address
             market,
             principalAmount,
             collateralAmount,

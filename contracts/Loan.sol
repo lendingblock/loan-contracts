@@ -4,7 +4,7 @@ import "./LoanFactory.sol";
 
 contract Loan {
     LoanFactory public loanFactory;
-    uint256 public id;
+    bytes32 public id;
 
     /*
      * Event names follow the pattern `resource`-`action`.
@@ -51,7 +51,7 @@ contract Loan {
         return (msg.sender, loanFactory.worker());
     }
 
-    constructor(uint256 _id) public {
+    constructor(bytes32 _id) public {
         loanFactory = LoanFactory(msg.sender);
         id = _id;
     }

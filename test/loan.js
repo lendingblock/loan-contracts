@@ -12,7 +12,7 @@ contract('Loan', (accounts) => {
     //Call `expectTransfer() on it
     const address = _tx.logs[0].args.contractAddress;
     const tx = await Loan.at(address).expectTransfer(
-      loan.borrowerUserId,
+      loan.meta.borrowerUserId,
       loan.meta.holdingUserId,
       loan.meta.collateralAmount,
       loan.meta.collateralCurrency,
@@ -20,7 +20,7 @@ contract('Loan', (accounts) => {
     );
 
     assertEventFired(tx, 'TransferExpected');
-    assertEventContain(tx, {fieldName: 'from'}, loan.borrowerUserId);
+    assertEventContain(tx, {fieldName: 'from'}, loan.meta.borrowerUserId);
     assertEventContain(tx, {fieldName: 'to'}, loan.meta.holdingUserId);
     assertEventContain(tx, {fieldName: 'amount', fieldType: 'uint'}, loan.meta.collateralAmount);
     assertEventContain(tx, {fieldName: 'currency', fieldType: 'bytes32'}, loan.meta.collateralCurrency);

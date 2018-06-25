@@ -44,7 +44,7 @@ class Loan {
   constructor(config = {}) {
     this.config = this.parseConfig(config);
 
-    this.borrowerUserId = this.config.borrowerUserId;
+    this.id = this.config.id;
     this.market = this.formatMarket(this.config);
     this.principalAmount = this.config.principalAmount;
     this.collateralAmount = this.config.collateralAmount;
@@ -57,6 +57,7 @@ class Loan {
 
   parseConfig(config) {
     return Object.assign({}, {
+      id: 'id',
       tenor: 365,
       principalCurrency: 'BTC',
       collateralCurrency: 'ETH',
@@ -110,6 +111,8 @@ class Loan {
   }
 
   generateMeta(config, lenders, interests) {
+    //@todo: filter config to only extract fields that are really meta
+    // Currenty everything is passed,resulting in redundant info
     return Object.assign({}, config, {
       lenders,
       interests
@@ -122,7 +125,7 @@ class Loan {
 
   formatToContractArgs() {
     return [
-      this.borrowerUserId,
+      this.id,
       this.market,
       this.principalAmount,
       this.collateralAmount,

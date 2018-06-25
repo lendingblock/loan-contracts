@@ -8,7 +8,7 @@ contract('LoanFactory', (accounts) => {
     const tx = await loanFactory.createLoan(...(loan.formatToContractArgs()));
 
     assertEventFired(tx, 'LoanCreated');
-    assertEventContain(tx, {fieldName: 'borrowerUserId'}, loan.borrowerUserId);
+    assertEventContain(tx, {fieldName: 'id'}, loan.id);
     assertEventContain(tx, {fieldName: 'market'}, loan.market);
     assertEventContain(tx, {fieldName: 'principalAmount', fieldType: 'uint'}, loan.principalAmount);
     assertEventContain(tx, {fieldName: 'collateralAmount', fieldType: 'uint'}, loan.collateralAmount);
