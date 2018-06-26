@@ -13,20 +13,21 @@ const web3Latest = new Web3Latest();
  */
 const assertEventContain = (tx, filter, value) => {
   filter = Object.assign({}, {logIndex: 0, fieldType: 'bytes32'}, filter);
-  const result = tx.logs[filter.logIndex].args[filter.fieldName];
+  let result = tx.logs[filter.logIndex].args[filter.fieldName];
+  let expected = null;
 
   //We need to format the value we are expecting for certain type of string,
   //to match the format returned by the transaction log
-  let expected = null;
   if(filter.fieldType === 'bytes32') {
     expected = web3Latest.utils.padRight(web3Latest.utils.fromAscii(value), 64);
   } else if(filter.fieldType === 'uint' || filter.fieldType === 'string') {
-    expected = value;
+    expected = value.toString();
+    result = result.toString()
   } else {
     throw new Error('assertEvent: filter.fieldType needs to be `bytes32`');
   }
 
-  assert.equal(result, expected);
+  assert.strictEqual(result, expected);
 }
 
 /**
@@ -37,7 +38,7 @@ const assertEventContain = (tx, filter, value) => {
  *                         First event to fire is index 0, etc..
  */
 const assertEventFired = (tx, eventName, index = 0) => {
-  assert.equal(tx.logs[index].event, eventName);
+  assert.strictEqual(tx.logs[index].event, eventName);
 }
 
 class Loan {
@@ -81,10 +82,10 @@ class Loan {
       const paymentTime = web3
         .toBigNumber('1528188800')
         .add(web3.toBigNumber(i).times('86400').times('30'))
-        .toNumber();
+        .toString();
       const interestAmounts = web3
         .toBigNumber('10000000000000000000000')
-        .toNumber();
+        .toString();
       const interest = {
         paymentTime,
         interestAmounts
