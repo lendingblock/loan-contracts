@@ -72,7 +72,7 @@ contract LoanFactory {
         loanCount++;
         emit LoanCreated(
             loan,
-            loanId, //loan address
+            loanId,
             market,
             principalAmount,
             collateralAmount,

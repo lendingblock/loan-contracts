@@ -51,10 +51,6 @@ contract Loan {
         _;
     }
 
-    function getWorker() public view returns(address, address) {
-        return (msg.sender, loanFactory.worker());
-    }
-
     constructor(bytes32 _id) public {
         loanFactory = LoanFactory(msg.sender);
         id = _id;
