@@ -4,10 +4,10 @@ const web3Latest = new Web3Latest();
 
 /**
  * @description Assert a transaction log contains an event with a field matching a value
- * @param filter - Object describing the field to assert on and the log of the event: 
+ * @param filter - Object describing the field to assert on and the log of the event:
  *                 {
- *                   fieldName: String, 
- *                   fieldType:  ['bytes32', 'uint', 'string'], 
+ *                   fieldName: String,
+ *                   fieldType:  ['bytes32', 'uint', 'string'],
  *                   logIndex: Integer
  *                 }
  */
@@ -22,13 +22,13 @@ const assertEventContain = (tx, filter, value) => {
     expected = web3Latest.utils.padRight(web3Latest.utils.fromAscii(value), 64);
   } else if(filter.fieldType === 'uint' || filter.fieldType === 'string') {
     expected = value.toString();
-    result = result.toString()
+    result = result.toString();
   } else {
     throw new Error('assertEvent: filter.fieldType needs to be `bytes32`');
   }
 
   assert.strictEqual(result, expected);
-}
+};
 
 /**
  * @description Assert an event as fired
@@ -39,7 +39,7 @@ const assertEventContain = (tx, filter, value) => {
  */
 const assertEventFired = (tx, eventName, index = 0) => {
   assert.strictEqual(tx.logs[index].event, eventName);
-}
+};
 
 class Loan {
   constructor(config = {}) {
@@ -50,9 +50,9 @@ class Loan {
     this.principalAmount = this.config.principalAmount;
     this.collateralAmount = this.config.collateralAmount;
 
-    const interests = this.generateInterests(this.config)
-    const lenders = this.generateLenders(this.config)
-    this.meta = this.generateMeta(this.config, lenders)
+    this.generateInterests(this.config);
+    const lenders = this.generateLenders(this.config);
+    this.meta = this.generateMeta(this.config, lenders);
     this.metaJSON = JSON.stringify(this.meta);
   }
 
@@ -91,7 +91,7 @@ class Loan {
         interestAmounts
       };
       interests.push(interest);
-    };
+    }
     return interests;
   }
 
@@ -105,7 +105,7 @@ class Loan {
         amount: web3.toBigNumber('700000000000000000000').dividedBy(50).toString(),
         amountWeight: web3.toBigNumber('500').toString(),
         rateWeight: web3.toBigNumber('10000').dividedBy(50).toString()
-      }
+      };
       lenders.push(lender);
     }
     return lenders;
@@ -138,7 +138,7 @@ class Loan {
 
 const loanGenerator = () => {
   return new Loan();
-}
+};
 
 module.exports = {
   assertEventFired,

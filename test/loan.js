@@ -2,7 +2,7 @@ const LoanFactory = artifacts.require('LoanFactory');
 const Loan = artifacts.require('Loan');
 const {assertEventContain, assertEventFired, loanGenerator} = require('./utils.js');
 
-contract('Loan', (accounts) => {
+contract('Loan', () => {
   it('should emit `TransferExpected` event with correct parameters when `expectTransfer()` called', async () => {
     //Create a new loan contract
     const timestamp = new Date().getTime();
