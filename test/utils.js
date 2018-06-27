@@ -12,15 +12,15 @@ const web3Latest = new Web3Latest();
  *                 }
  */
 const assertEventContain = (tx, filter, value) => {
-  filter = Object.assign({}, {logIndex: 0, fieldType: 'bytes32'}, filter);
+  filter = Object.assign({}, { logIndex: 0, fieldType: 'bytes32' }, filter);
   let result = tx.logs[filter.logIndex].args[filter.fieldName];
   let expected = null;
 
   //We need to format the value we are expecting for certain type of string,
   //to match the format returned by the transaction log
-  if(filter.fieldType === 'bytes32') {
+  if (filter.fieldType === 'bytes32') {
     expected = web3Latest.utils.padRight(web3Latest.utils.fromAscii(value), 64);
-  } else if(filter.fieldType === 'uint' || filter.fieldType === 'string') {
+  } else if (filter.fieldType === 'uint' || filter.fieldType === 'string') {
     expected = value.toString();
     result = result.toString();
   } else {
@@ -57,23 +57,27 @@ class Loan {
   }
 
   parseConfig(config) {
-    return Object.assign({}, {
-      id: 'id',
-      tenor: 365,
-      principalCurrency: 'BTC',
-      collateralCurrency: 'ETH',
-      lowerRequiredMargin: 0.8,
-      higherRequiredMargin: 1.2,
-      principalAmount: Math.pow(10, 8), //10^8 satoshis = 1 BTC
-      collateralAmount: 12 * Math.pow(10, 18), //10^18 = 1 ether
-      lastMarginTime: null,
-      borrowerUserId: 'borrowerUserId',
-      holdingUserId: 'holdingUserId',
-      escrowUserId: 'escrowUserId',
-      liquidatorUserId: 'liquidatorUserId',
-      lendersCount: 20,
-      interestsCount: 12
-    }, config);
+    return Object.assign(
+      {},
+      {
+        id: 'id',
+        tenor: 365,
+        principalCurrency: 'BTC',
+        collateralCurrency: 'ETH',
+        lowerRequiredMargin: 0.8,
+        higherRequiredMargin: 1.2,
+        principalAmount: Math.pow(10, 8), //10^8 satoshis = 1 BTC
+        collateralAmount: 12 * Math.pow(10, 18), //10^18 = 1 ether
+        lastMarginTime: null,
+        borrowerUserId: 'borrowerUserId',
+        holdingUserId: 'holdingUserId',
+        escrowUserId: 'escrowUserId',
+        liquidatorUserId: 'liquidatorUserId',
+        lendersCount: 20,
+        interestsCount: 12
+      },
+      config
+    );
   }
 
   generateInterests(config) {
@@ -81,11 +85,14 @@ class Loan {
     for (let i = 0; i < config.interestsCount; i++) {
       const paymentTime = web3
         .toBigNumber('1528188800')
-        .add(web3.toBigNumber(i).times('86400').times('30'))
+        .add(
+          web3
+            .toBigNumber(i)
+            .times('86400')
+            .times('30')
+        )
         .toString();
-      const interestAmounts = web3
-        .toBigNumber('10000000000000000000000')
-        .toString();
+      const interestAmounts = web3.toBigNumber('10000000000000000000000').toString();
       const interest = {
         paymentTime,
         interestAmounts
@@ -102,9 +109,15 @@ class Loan {
         id: web3.sha3(i.toString()),
         orderId: web3.sha3((i * 33).toString()),
         lenderUserId: web3.sha3((i * 77).toString()),
-        amount: web3.toBigNumber('700000000000000000000').dividedBy(50).toString(),
+        amount: web3
+          .toBigNumber('700000000000000000000')
+          .dividedBy(50)
+          .toString(),
         amountWeight: web3.toBigNumber('500').toString(),
-        rateWeight: web3.toBigNumber('10000').dividedBy(50).toString()
+        rateWeight: web3
+          .toBigNumber('10000')
+          .dividedBy(50)
+          .toString()
       };
       lenders.push(lender);
     }
@@ -125,15 +138,8 @@ class Loan {
   }
 
   formatToContractArgs() {
-    return [
-      this.id,
-      this.market,
-      this.principalAmount,
-      this.collateralAmount,
-      this.metaJSON
-    ];
+    return [this.id, this.market, this.principalAmount, this.collateralAmount, this.metaJSON];
   }
-
 }
 
 const loanGenerator = () => {
