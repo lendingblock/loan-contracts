@@ -25,6 +25,7 @@ contract Loan {
         uint256 amount,
         bytes32 currency,
         string reason,
+        bytes32 txid,
         uint256 timestamp
     );
 
@@ -76,7 +77,7 @@ contract Loan {
     /*
      * @dev We witnessed a transfer on Ethereum or another blockchain
      */
-    function observeTransfer(bytes32 from, bytes32 to, uint256 amount, bytes32 currency, string reason, uint256 timestamp)
+    function observeTransfer(bytes32 from, bytes32 to, uint256 amount, bytes32 currency, string reason, bytes32 txid, uint256 timestamp)
         external
         onlyWorker
     {
@@ -86,6 +87,7 @@ contract Loan {
             amount,
             currency,
             reason,
+            txid,
             timestamp
         );
     }
@@ -100,7 +102,7 @@ contract Loan {
         );
     }
 
-    function changeInterest(uint256 paymentTime, uint256 amount, bool paid, uint256 interestId, uint256 timestamp)
+    function changeInterest(uint256 interestId, uint256 paymentTime, uint256 amount, bool paid, uint256 timestamp)
         external
         onlyOwner
     {
