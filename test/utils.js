@@ -12,22 +12,28 @@ const web3Latest = new Web3Latest();
  *                 }
  */
 const assertEventContain = (tx, filter, value) => {
-  filter = Object.assign({}, { logIndex: 0, fieldType: 'bytes32' }, filter);
+  filter = Object.assign({}, { logIndex: 0 }, filter);
   let result = tx.logs[filter.logIndex].args[filter.fieldName];
   let expected = null;
 
   //We need to format the value we are expecting for certain type of string,
   //to match the format returned by the transaction log
   if (filter.fieldType === 'bytes32') {
-    expected = web3Latest.utils.padRight(web3Latest.utils.fromAscii(value), 64);
-  } else if (filter.fieldType === 'uint' || filter.fieldType === 'string') {
+    expected = toBytes32(value);
+  } else if (filter.fieldType === 'uint') {
     expected = value.toString();
     result = result.toString();
+  } else if (filter.fieldType === 'bool' || filter.fieldType === 'string' || filter.fieldType === 'address') {
+    expected = value;
   } else {
-    throw new Error('assertEvent: filter.fieldType needs to be `bytes32`');
+    throw new Error('assertEvent: unknown filter.fieldType');
   }
 
   assert.strictEqual(result, expected);
+};
+
+const toBytes32 = value => {
+  return web3Latest.utils.padRight(web3Latest.utils.fromAscii(value), 64);
 };
 
 /**
@@ -44,16 +50,14 @@ const assertEventFired = (tx, eventName, index = 0) => {
 class Loan {
   constructor(config = {}) {
     this.config = this.parseConfig(config);
-
     this.id = this.config.id;
     this.market = this.formatMarket(this.config);
     this.principalAmount = this.config.principalAmount;
     this.collateralAmount = this.config.collateralAmount;
-
-    this.generateInterests(this.config);
-    const lenders = this.generateLenders(this.config);
-    this.meta = this.generateMeta(this.config, lenders);
-    this.metaJSON = JSON.stringify(this.meta);
+    const interests = this.exampleInterests(this.config);
+    const lenders = this.exampleLenders(this.config);
+    this.meta = this.generateMeta(this.config, lenders, interests);
+    this.metaString = JSON.stringify(this.meta);
   }
 
   parseConfig(config) {
@@ -61,28 +65,46 @@ class Loan {
       {},
       {
         id: 'id',
-        tenor: 365,
+        tenor: '365',
         principalCurrency: 'BTC',
         collateralCurrency: 'ETH',
-        lowerRequiredMargin: 0.8,
-        higherRequiredMargin: 1.2,
-        principalAmount: Math.pow(10, 8), //10^8 satoshis = 1 BTC
-        collateralAmount: 12 * Math.pow(10, 18), //10^18 = 1 ether
-        lastMarginTime: null,
+        lowerRequiredMargin: web3
+          .toBigNumber('10')
+          .pow('18')
+          .times('12')
+          .times('1.1')
+          .toString(),
+        higherRequiredMargin: web3
+          .toBigNumber('10')
+          .pow('18')
+          .times('12')
+          .times('1.2')
+          .toString(),
+        principalAmount: web3
+          .toBigNumber('10')
+          .pow('8')
+          .toString(), //10^8 satoshis = 1 BTC
+        collateralAmount: web3
+          .toBigNumber('10')
+          .pow('18')
+          .times('12')
+          .toString(), //10^18 = 1 ether
+        lastMarginTime: '0',
         borrowerUserId: 'borrowerUserId',
         holdingUserId: 'holdingUserId',
         escrowUserId: 'escrowUserId',
         liquidatorUserId: 'liquidatorUserId',
-        lendersCount: 20,
-        interestsCount: 12
+        lendersCount: '20',
+        interestsCount: '12'
       },
       config
     );
   }
 
-  generateInterests(config) {
+  exampleInterests(config) {
     const interests = [];
     for (let i = 0; i < config.interestsCount; i++) {
+      const interestId = i;
       const paymentTime = web3
         .toBigNumber('1528188800')
         .add(
@@ -92,17 +114,18 @@ class Loan {
             .times('30')
         )
         .toString();
-      const interestAmounts = web3.toBigNumber('10000000000000000000000').toString();
+      const amount = web3.toBigNumber('10000000000000000000000').toString();
       const interest = {
+        interestId,
         paymentTime,
-        interestAmounts
+        amount
       };
       interests.push(interest);
     }
     return interests;
   }
 
-  generateLenders(config) {
+  exampleLenders(config) {
     const lenders = [];
     for (let i = 0; i < config.lendersCount; i++) {
       const lender = {
@@ -111,12 +134,15 @@ class Loan {
         lenderUserId: web3.sha3((i * 77).toString()),
         amount: web3
           .toBigNumber('700000000000000000000')
-          .dividedBy(50)
+          .dividedBy(lenders.length)
           .toString(),
-        amountWeight: web3.toBigNumber('500').toString(),
+        amountWeight: web3
+          .toBigNumber('1')
+          .dividedBy(lenders.length)
+          .toString(),
         rateWeight: web3
-          .toBigNumber('10000')
-          .dividedBy(50)
+          .toBigNumber('1')
+          .dividedBy(lenders.length)
           .toString()
       };
       lenders.push(lender);
@@ -138,16 +164,17 @@ class Loan {
   }
 
   formatToContractArgs() {
-    return [this.id, this.market, this.principalAmount, this.collateralAmount, this.metaJSON];
+    return [this.id, this.market, this.principalAmount, this.collateralAmount, this.metaString];
   }
 }
 
-const loanGenerator = () => {
-  return new Loan();
+const loanGenerator = config => {
+  return new Loan(config);
 };
 
 module.exports = {
   assertEventFired,
   assertEventContain,
-  loanGenerator
+  loanGenerator,
+  toBytes32
 };

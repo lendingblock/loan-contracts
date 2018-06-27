@@ -1,5 +1,5 @@
 var LoanFactory = artifacts.require('./LoanFactory.sol');
 
-module.exports = async function(deployer) {
+module.exports = function(deployer) {
   deployer.deploy(LoanFactory);
 };

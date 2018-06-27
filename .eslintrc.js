@@ -28,7 +28,7 @@ module.exports = {
     indent: [ERROR, 2],
     semi: ERROR,
     quotes: [ERROR, `single`],
-    complexity: [ERROR, { max: 5 }],
+    complexity: [ERROR, { max: 11 }],
     'react/prop-types': OFF
   },
 
@@ -37,6 +37,7 @@ module.exports = {
     web3: true,
     require: true,
     contract: true,
-    it: true
+    it: true,
+    assert: true
   }
 };
