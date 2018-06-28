@@ -54,7 +54,7 @@ truffle migrate --network rinkeby
 
 install dependency
 ```
-npm install truffle-hdwallet-provider --save
+npm install truffle-privatekey-provider --save
 ```
 add the following to `truffle.js`
 ```
