@@ -1,6 +1,7 @@
 const assert = require('assert');
 const Web3Latest = require('web3'); //We use new version of web3 for its utils module
 const web3Latest = new Web3Latest();
+const uuidv4 = require('uuid/v4');
 
 /**
  * @description Assert a transaction log contains an event with a field matching a value
@@ -12,7 +13,13 @@ const web3Latest = new Web3Latest();
  *                 }
  */
 const assertEventContain = (tx, filter, value) => {
-  filter = Object.assign({}, { logIndex: 0 }, filter);
+  filter = Object.assign(
+    {},
+    {
+      logIndex: 0
+    },
+    filter
+  );
   let result = tx.logs[filter.logIndex].args[filter.fieldName];
   let expected = null;
 
@@ -50,62 +57,75 @@ const assertEventFired = (tx, eventName, index = 0) => {
 class Loan {
   constructor(config = {}) {
     this.config = this.parseConfig(config);
-    this.id = this.config.id;
-    this.market = this.formatMarket(this.config);
-    this.principalAmount = this.config.principalAmount;
-    this.collateralAmount = this.config.collateralAmount;
-    const interests = this.exampleInterests(this.config);
-    const lenders = this.exampleLenders(this.config);
-    this.meta = this.generateMeta(this.config, lenders, interests);
-    this.metaString = JSON.stringify(this.meta);
+    const interestCount = config.interestCount ? config.interestCount : 20;
+    delete this.config.interestCount;
+    const partyCount = config.partyCount ? config.partyCount : 12;
+    delete this.config.partyCount;
+    if (this.config.interests.length === 0) {
+      this.config.interests = this.exampleInterests(interestCount);
+    }
+    if (this.config.parties.length === 0) {
+      this.config.parties = this.exampleParties(partyCount);
+    }
+    this.metaString = JSON.stringify(this.config);
   }
 
   parseConfig(config) {
     return Object.assign(
       {},
       {
-        id: 'id',
-        tenor: '365',
-        principalCurrency: 'BTC',
-        collateralCurrency: 'ETH',
-        lowerRequiredMargin: web3
+        id: uuidv4(),
+        timestamp: new Date().getTime(),
+        status: 'PENDING',
+        price: '5.8837',
+        tenor: '1m',
+        currency: 'BTC',
+        collateral: 'ETH',
+        principal_amount: web3
+          .toBigNumber('10')
+          .pow('8')
+          .toString(), //10^8 satoshis = 1 BTC
+        collateral_amount: web3
+          .toBigNumber('10')
+          .pow('18')
+          .times('12')
+          .toString(), //10^18 = 1 ether
+        blockchain_address: '',
+        factory_blockchain_address: '',
+        blockchain: 'ETH',
+        legal_contract: '',
+        lower_required_margin: web3
           .toBigNumber('10')
           .pow('18')
           .times('12')
           .times('1.1')
           .toString(),
-        higherRequiredMargin: web3
+        higher_required_margin: web3
           .toBigNumber('10')
           .pow('18')
           .times('12')
           .times('1.2')
           .toString(),
-        principalAmount: web3
-          .toBigNumber('10')
-          .pow('8')
-          .toString(), //10^8 satoshis = 1 BTC
-        collateralAmount: web3
-          .toBigNumber('10')
-          .pow('18')
-          .times('12')
-          .toString(), //10^18 = 1 ether
-        lastMarginTime: '0',
-        borrowerUserId: 'borrowerUserId',
-        holdingUserId: 'holdingUserId',
-        escrowUserId: 'escrowUserId',
-        liquidatorUserId: 'liquidatorUserId',
-        lendersCount: '20',
-        interestsCount: '12'
+        liquidator_user_id: uuidv4(),
+        last_margin_time: '0',
+        created: new Date().getTime(),
+        maturity: new Date().getTime() + 60 * 60 * 24 * 30,
+        lnd_creation_price: '0.0039',
+        principal_creation_price: '7093.8754',
+        collateral_creation_price: '412.3875',
+        parties: [],
+        interests: []
       },
       config
     );
   }
 
-  exampleInterests(config) {
+  exampleInterests(count) {
     const interests = [];
-    for (let i = 0; i < config.interestsCount; i++) {
-      const interestId = i;
-      const paymentTime = web3
+    for (let i = 0; i < count; i++) {
+      const id = uuidv4();
+      const seq = i + 1;
+      const payment_time = web3
         .toBigNumber('1528188800')
         .add(
           web3
@@ -114,10 +134,15 @@ class Loan {
             .times('30')
         )
         .toString();
+      const status = 'PENDING';
+      const currency = 'LND';
       const amount = web3.toBigNumber('10000000000000000000000').toString();
       const interest = {
-        interestId,
-        paymentTime,
+        id,
+        seq,
+        payment_time,
+        status,
+        currency,
         amount
       };
       interests.push(interest);
@@ -125,46 +150,32 @@ class Loan {
     return interests;
   }
 
-  exampleLenders(config) {
-    const lenders = [];
-    for (let i = 0; i < config.lendersCount; i++) {
-      const lender = {
-        id: web3.sha3(i.toString()),
-        orderId: web3.sha3((i * 33).toString()),
-        lenderUserId: web3.sha3((i * 77).toString()),
+  exampleParties(count) {
+    const parties = [];
+    for (let i = 0; i < count; i++) {
+      const party = {
+        id: uuidv4(),
+        order_id: uuidv4(),
+        user_id: uuidv4(),
+        org_id: uuidv4(),
+        side: 'borrow',
+        currency: 'BTC',
+        collateral: 'ETH',
         amount: web3
           .toBigNumber('700000000000000000000')
-          .dividedBy(lenders.length)
+          .dividedBy(parties.length)
           .toString(),
-        amountWeight: web3
-          .toBigNumber('1')
-          .dividedBy(lenders.length)
-          .toString(),
-        rateWeight: web3
-          .toBigNumber('1')
-          .dividedBy(lenders.length)
-          .toString()
+        price: '5.8837',
+        timestamp: new Date().getTime(),
+        status: 'COMPLETED'
       };
-      lenders.push(lender);
+      parties.push(party);
     }
-    return lenders;
-  }
-
-  generateMeta(config, lenders, interests) {
-    //@todo: filter config to only extract fields that are really meta
-    // Currenty everything is passed,resulting in redundant info
-    return Object.assign({}, config, {
-      lenders,
-      interests
-    });
-  }
-
-  formatMarket(config) {
-    return `${config.principalCurrency}/${config.collateralCurrency}-${config.tenor}`;
+    return parties;
   }
 
   formatToContractArgs() {
-    return [this.id, this.market, this.principalAmount, this.collateralAmount, this.metaString];
+    return [this.config.id, this.metaString];
   }
 }
 

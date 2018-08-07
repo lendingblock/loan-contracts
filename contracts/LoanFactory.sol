@@ -6,34 +6,30 @@ contract LoanFactory {
     address public owner;
     address public pendingOwner;
     address public worker;
-    uint256 public loanCount;
+    Loan[] public loans;
 
     event AccessChanged (
         string access,
         address previous,
         address current
     );
+
     /*
      * Event names follow the pattern `resource`-`action`.
      */
     event LoanCreated (
-        address contractAddress,
-        bytes32 id,
-        bytes32 market, //Principal/collareral-tenor. ex: BTC/ETH-30D
-        uint256 principalAmount,
-        uint256 collateralAmount,
-        string loanMeta,
-        uint256 timestamp
+        address loanAddress,
+        string id,
+        uint256 seq
     );
 
     /*
      * Grace period after a payment instruction, in seconds
      */
     event LeadTimeChanged (
-      bytes32 market,
-      bytes32 leadTimeType, //can be for margin, interest or principal repayment
-      uint256 leadTime,
-      uint256 timestamp
+        bytes32 leadTimeType, //can be for margin, interest or principal repayment
+        uint256 leadTime,
+        uint256 timestamp
     );
 
     modifier onlyOwner() {
@@ -57,27 +53,15 @@ contract LoanFactory {
      * We might have to compress several array element into one
      * to solve the issue
      */
-    function createLoan(
-        bytes32 loanId,
-        bytes32 market,
-        uint256 principalAmount,
-        uint256 collateralAmount,
-        string loanMeta,
-        uint256 timestamp
-    )
+    function createLoan(string id, string loanMeta)
         external
         onlyWorker
     {
-        Loan loan = new Loan(loanId);
-        loanCount++;
+        loans.push(new Loan(id, loanMeta));
         emit LoanCreated(
-            loan,
-            loanId,
-            market,
-            principalAmount,
-            collateralAmount,
-            loanMeta,
-            timestamp
+            loans[loans.length - 1],
+            id,
+            loans.length
         );
     }
 
@@ -107,12 +91,11 @@ contract LoanFactory {
         worker = _worker;
     }
 
-    function changeLeadtime(bytes32 market, bytes32 leadTimeType, uint256 leadTime, uint256 timestamp)
+    function changeLeadtime(bytes32 leadTimeType, uint256 leadTime, uint256 timestamp)
         external
-        onlyOwner
+        onlyWorker
     {
         emit LeadTimeChanged(
-            market,
             leadTimeType,
             leadTime,
             timestamp

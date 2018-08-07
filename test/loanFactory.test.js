@@ -1,3 +1,4 @@
+const truffleEvent = require('truffle-events');
 const LoanFactory = artifacts.require('LoanFactory');
 const { assertEventContain, assertEventFired, loanGenerator } = require('./utils.js');
 let loanFactory;
@@ -83,23 +84,31 @@ contract('LoanFactory', accounts => {
     const worker = await loanFactory.worker.call();
     assert.strictEqual(worker, accounts[0]);
   });
-  it('should emit LoanCreated event when createLoan() is called', async () => {
-    const timestamp = new Date().getTime();
+  it('should emit LoanCreated, MetaUpdated event when createLoan() is called', async () => {
     const loanExample = loanGenerator();
-    const tx = await loanFactory.createLoan(...loanExample.formatToContractArgs(), timestamp);
+    const tx = await loanFactory.createLoan(...loanExample.formatToContractArgs());
+    const loanAddress = await loanFactory.loans(0);
     assertEventFired(tx, 'LoanCreated');
-    assertEventContain(tx, { fieldName: 'id', fieldType: 'bytes32' }, loanExample.id);
-    assertEventContain(tx, { fieldName: 'market', fieldType: 'bytes32' }, loanExample.market);
-    assertEventContain(tx, { fieldName: 'principalAmount', fieldType: 'uint' }, loanExample.principalAmount);
-    assertEventContain(tx, { fieldName: 'collateralAmount', fieldType: 'uint' }, loanExample.collateralAmount);
-    assertEventContain(tx, { fieldName: 'loanMeta', fieldType: 'string' }, loanExample.metaString);
-    assertEventContain(tx, { fieldName: 'timestamp', fieldType: 'uint' }, timestamp);
+    assertEventContain(tx, { fieldName: 'loanAddress', fieldType: 'address' }, loanAddress);
+    assertEventContain(tx, { fieldName: 'id', fieldType: 'string' }, loanExample.config.id);
+    assertEventContain(tx, { fieldName: 'seq', fieldType: 'uint' }, '1');
+    let metaUpdated = truffleEvent.formTxObject('Loan', 0, tx);
+    assert.strictEqual(metaUpdated.logs[0].args.updatedMeta, loanExample.metaString);
+    assert.strictEqual(metaUpdated.logs[0].args.seq, '0');
   });
-  it('should not emit LoanCreated event without access', async () => {
-    const timestamp = new Date().getTime();
+  it('should increment seq when createLoan() is called again', async () => {
+    const loanExample = loanGenerator();
+    const tx = await loanFactory.createLoan(...loanExample.formatToContractArgs());
+    const loanAddress = await loanFactory.loans(1);
+    assertEventFired(tx, 'LoanCreated');
+    assertEventContain(tx, { fieldName: 'loanAddress', fieldType: 'address' }, loanAddress);
+    assertEventContain(tx, { fieldName: 'id', fieldType: 'string' }, loanExample.config.id);
+    assertEventContain(tx, { fieldName: 'seq', fieldType: 'uint' }, '2');
+  });
+  it('should not emit LoanCreated, MetaUpdated event without access', async () => {
     const loanExample = loanGenerator();
     try {
-      await loanFactory.createLoan(...loanExample.formatToContractArgs(), timestamp, { from: accounts[1] });
+      await loanFactory.createLoan(...loanExample.formatToContractArgs(), { from: accounts[1] });
       assert.fail('this tx should fail');
     } catch (e) {
       assert.strictEqual(e.message, 'VM Exception while processing transaction: revert');
@@ -107,9 +116,8 @@ contract('LoanFactory', accounts => {
   });
   it('should emit LeadTimeChanged event when changeLeadtime() is called', async () => {
     const timestamp = new Date().getTime();
-    const tx = await loanFactory.changeLeadtime('BTC/ETH-30D', 'margin', '14400', timestamp, { from: accounts[1] });
+    const tx = await loanFactory.changeLeadtime('margin', '14400', timestamp, { from: accounts[0] });
     assertEventFired(tx, 'LeadTimeChanged');
-    assertEventContain(tx, { fieldName: 'market', fieldType: 'bytes32' }, 'BTC/ETH-30D');
     assertEventContain(tx, { fieldName: 'leadTimeType', fieldType: 'bytes32' }, 'margin');
     assertEventContain(tx, { fieldName: 'leadTime', fieldType: 'uint' }, '14400');
     assertEventContain(tx, { fieldName: 'timestamp', fieldType: 'uint' }, timestamp);
@@ -117,7 +125,7 @@ contract('LoanFactory', accounts => {
   it('should not emit LeadTimeChanged event without access', async () => {
     const timestamp = new Date().getTime();
     try {
-      await loanFactory.changeLeadtime('BTC/ETH-30D', 'margin', '14400', timestamp, { from: accounts[0] });
+      await loanFactory.changeLeadtime('margin', '14400', timestamp, { from: accounts[1] });
       assert.fail('this tx should fail');
     } catch (e) {
       assert.strictEqual(e.message, 'VM Exception while processing transaction: revert');
