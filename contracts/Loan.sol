@@ -4,63 +4,61 @@ import "./LoanFactory.sol";
 
 contract Loan {
     LoanFactory public loanFactory;
-    bytes32 public id;
+    string public id;
+    uint256 public seq;
 
     /*
      * Event names follow the pattern `resource`-`action`.
      */
 
     event TransferExpected(
-        bytes32 from,
-        bytes32 to,
+        string from,
+        string to,
         uint256 amount,
         bytes32 currency,
         string reason,
-        uint256 timestamp
+        uint256 timestamp,
+        uint256 seq
     );
 
     event TransferObserved(
-        bytes32 from,
-        bytes32 to,
+        string from,
+        string to,
         uint256 amount,
         bytes32 currency,
         string reason,
         bytes32 txid,
-        uint256 timestamp
+        uint256 timestamp,
+        uint256 seq
     );
 
-    event InterestChanged(
-        uint256 interestId,
-        uint256 paymentTime,
-        uint256 amount,
-        bool paid,
-        uint256 timestamp
+    event MetaUpdated(
+        string updatedMeta,
+        uint256 seq
     );
-
-    event StatusChanged(
-        string status,
-        uint256 timestamp
-    );
-
-    modifier onlyOwner() {
-        require(msg.sender == loanFactory.owner());
-        _;
-    }
 
     modifier onlyWorker() {
         require(msg.sender == loanFactory.worker());
         _;
     }
 
-    constructor(bytes32 _id) public {
+    constructor(string _id, string loanMeta) public {
         loanFactory = LoanFactory(msg.sender);
         id = _id;
+        emit MetaUpdated(loanMeta, seq++);
     }
 
     /*
      * @dev We expect a transfer on Ethereum or another blockchain
      */
-    function expectTransfer(bytes32 from, bytes32 to, uint256 amount, bytes32 currency, string reason, uint256 timestamp)
+    function expectTransfer(
+        string from,
+        string to,
+        uint256 amount,
+        bytes32 currency,
+        string reason,
+        uint256 timestamp
+    )
         external
         onlyWorker
     {
@@ -70,14 +68,23 @@ contract Loan {
             amount,
             currency,
             reason,
-            timestamp
+            timestamp,
+            seq++
         );
     }
 
     /*
      * @dev We witnessed a transfer on Ethereum or another blockchain
      */
-    function observeTransfer(bytes32 from, bytes32 to, uint256 amount, bytes32 currency, string reason, bytes32 txid, uint256 timestamp)
+    function observeTransfer(
+        string from,
+        string to,
+        uint256 amount,
+        bytes32 currency,
+        string reason,
+        bytes32 txid,
+        uint256 timestamp
+    )
         external
         onlyWorker
     {
@@ -88,31 +95,18 @@ contract Loan {
             currency,
             reason,
             txid,
-            timestamp
+            timestamp,
+            seq++
         );
     }
 
-    function changeStatus(string status, uint256 timestamp)
+    function updateMeta(
+        string updatedMeta
+    )
         external
         onlyWorker
     {
-        emit StatusChanged(
-            status,
-            timestamp
-        );
-    }
-
-    function changeInterest(uint256 interestId, uint256 paymentTime, uint256 amount, bool paid, uint256 timestamp)
-        external
-        onlyOwner
-    {
-        emit InterestChanged(
-            interestId,
-            paymentTime,
-            amount,
-            paid,
-            timestamp
-        );
+        emit MetaUpdated(updatedMeta, seq++);
     }
 
     function() external {
