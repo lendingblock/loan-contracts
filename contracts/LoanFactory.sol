@@ -54,7 +54,7 @@ contract LoanFactory {
      * to solve the issue
      */
     function createLoan(string id, string loanMeta)
-        external
+        public
         onlyWorker
     {
         loans.push(new Loan(id, loanMeta));
@@ -66,7 +66,7 @@ contract LoanFactory {
     }
 
     function changeOwner(address _pendingOwner)
-        external
+        public
         onlyOwner
     {
         emit AccessChanged("pendingOwner", pendingOwner, _pendingOwner);
@@ -74,7 +74,7 @@ contract LoanFactory {
     }
 
     function acceptOwner()
-        external
+        public
     {
         require(msg.sender == pendingOwner);
         emit AccessChanged("owner", owner, pendingOwner);
@@ -84,7 +84,7 @@ contract LoanFactory {
     }
 
     function changeWorker(address _worker)
-        external
+        public
         onlyOwner
     {
         emit AccessChanged("worker", worker, _worker);
@@ -92,7 +92,7 @@ contract LoanFactory {
     }
 
     function changeLeadtime(bytes32 leadTimeType, uint256 leadTime, uint256 timestamp)
-        external
+        public
         onlyWorker
     {
         emit LeadTimeChanged(

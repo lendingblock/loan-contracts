@@ -59,7 +59,7 @@ contract Loan {
         string reason,
         uint256 timestamp
     )
-        external
+        public
         onlyWorker
     {
         emit TransferExpected(
@@ -85,7 +85,7 @@ contract Loan {
         bytes32 txid,
         uint256 timestamp
     )
-        external
+        public
         onlyWorker
     {
         emit TransferObserved(
@@ -103,7 +103,7 @@ contract Loan {
     function updateMeta(
         string updatedMeta
     )
-        external
+        public
         onlyWorker
     {
         emit MetaUpdated(updatedMeta, seq++);
